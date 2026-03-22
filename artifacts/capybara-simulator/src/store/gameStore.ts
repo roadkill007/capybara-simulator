@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
-export type GamePhase = 'menu' | 'playing' | 'paused';
-export type CapybaraAction = 'idle' | 'walking' | 'running' | 'swimming' | 'eating' | 'sleeping' | 'happy';
+export type GamePhase = 'menu' | 'playing' | 'dead';
+export type CapybaraAction = 'idle' | 'walking' | 'running' | 'swimming' | 'eating' | 'sleeping' | 'happy' | 'shooting';
 
 export interface Friend {
   id: string;
@@ -16,13 +16,25 @@ export interface FoodItem {
   collected: boolean;
 }
 
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  goal: number;
+  progress: number;
+  completed: boolean;
+  type: 'food' | 'kill' | 'swim' | 'explore' | 'score';
+  reward: number;
+}
+
 interface GameState {
   phase: GamePhase;
   happiness: number;
   hunger: number;
   energy: number;
+  health: number;
   score: number;
-  timeOfDay: number; // 0-24
+  timeOfDay: number;
   isInWater: boolean;
   currentAction: CapybaraAction;
   friends: Friend[];
@@ -32,11 +44,18 @@ interface GameState {
   xp: number;
   totalPlays: number;
   bestScore: number;
-  
+  killCount: number;
+  foodCollected: number;
+  swimTime: number;
+  quests: Quest[];
+  invincibleTimer: number;
+
   setPhase: (phase: GamePhase) => void;
   setHappiness: (v: number) => void;
   setHunger: (v: number) => void;
   setEnergy: (v: number) => void;
+  setHealth: (v: number) => void;
+  damagePlayer: (amount: number) => void;
   addScore: (v: number) => void;
   setTimeOfDay: (v: number) => void;
   setIsInWater: (v: boolean) => void;
@@ -46,6 +65,7 @@ interface GameState {
   collectFood: (id: string) => void;
   incrementCombo: () => void;
   resetCombo: () => void;
+  killEnemy: () => void;
   startGame: () => void;
   endGame: () => void;
   tick: (dt: number) => void;
@@ -54,12 +74,26 @@ interface GameState {
 const INITIAL_FOOD: FoodItem[] = [
   { id: 'f1', type: 'watermelon', position: [5, 0.3, 5], collected: false },
   { id: 'f2', type: 'watermelon', position: [-8, 0.3, 3], collected: false },
-  { id: 'f3', type: 'grass', position: [3, 0.1, -7], collected: false },
-  { id: 'f4', type: 'grass', position: [-4, 0.1, 8], collected: false },
-  { id: 'f5', type: 'sugarcane', position: [10, 0.3, -5], collected: false },
-  { id: 'f6', type: 'sugarcane', position: [-10, 0.3, -8], collected: false },
-  { id: 'f7', type: 'watermelon', position: [0, 0.3, 15], collected: false },
-  { id: 'f8', type: 'grass', position: [15, 0.1, 0], collected: false },
+  { id: 'f3', type: 'watermelon', position: [20, 0.3, 15], collected: false },
+  { id: 'f4', type: 'watermelon', position: [-15, 0.3, 20], collected: false },
+  { id: 'f5', type: 'watermelon', position: [30, 0.3, -10], collected: false },
+  { id: 'f6', type: 'grass', position: [3, 0.1, -7], collected: false },
+  { id: 'f7', type: 'grass', position: [-4, 0.1, 8], collected: false },
+  { id: 'f8', type: 'grass', position: [-20, 0.1, -5], collected: false },
+  { id: 'f9', type: 'grass', position: [12, 0.1, 25], collected: false },
+  { id: 'f10', type: 'grass', position: [35, 0.1, 5], collected: false },
+  { id: 'f11', type: 'sugarcane', position: [10, 0.3, -5], collected: false },
+  { id: 'f12', type: 'sugarcane', position: [-10, 0.3, -8], collected: false },
+  { id: 'f13', type: 'sugarcane', position: [0, 0.3, 35], collected: false },
+  { id: 'f14', type: 'sugarcane', position: [-30, 0.3, 15], collected: false },
+  { id: 'f15', type: 'watermelon', position: [0, 0.3, 15], collected: false },
+];
+
+const INITIAL_QUESTS: Quest[] = [
+  { id: 'q1', title: 'Snack Time', description: 'Collect 5 food items', goal: 5, progress: 0, completed: false, type: 'food', reward: 200 },
+  { id: 'q2', title: 'Capybara Hunter', description: 'Defeat 3 enemy capybaras', goal: 3, progress: 0, completed: false, type: 'kill', reward: 300 },
+  { id: 'q3', title: 'Water Lover', description: 'Swim for 10 seconds', goal: 10, progress: 0, completed: false, type: 'swim', reward: 150 },
+  { id: 'q4', title: 'High Scorer', description: 'Reach a score of 1000', goal: 1000, progress: 0, completed: false, type: 'score', reward: 500 },
 ];
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -67,6 +101,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   happiness: 80,
   hunger: 60,
   energy: 100,
+  health: 100,
   score: 0,
   timeOfDay: 10,
   isInWater: false,
@@ -78,18 +113,42 @@ export const useGameStore = create<GameState>((set, get) => ({
   xp: 0,
   totalPlays: 0,
   bestScore: 0,
+  killCount: 0,
+  foodCollected: 0,
+  swimTime: 0,
+  quests: INITIAL_QUESTS,
+  invincibleTimer: 0,
 
   setPhase: (phase) => set({ phase }),
   setHappiness: (v) => set({ happiness: Math.max(0, Math.min(100, v)) }),
   setHunger: (v) => set({ hunger: Math.max(0, Math.min(100, v)) }),
   setEnergy: (v) => set({ energy: Math.max(0, Math.min(100, v)) }),
+  setHealth: (v) => set({ health: Math.max(0, Math.min(100, v)) }),
+  damagePlayer: (amount) => {
+    const { health, invincibleTimer } = get();
+    if (invincibleTimer > 0) return;
+    const newHealth = Math.max(0, health - amount);
+    if (newHealth <= 0) {
+      set({ health: 0, phase: 'dead' });
+    } else {
+      set({ health: newHealth, invincibleTimer: 1.5 });
+    }
+  },
   addScore: (v) => {
-    const { score, combo, xp, level } = get();
+    const { score, combo, xp, level, quests } = get();
     const multiplied = v * (1 + combo * 0.5);
     const newScore = score + multiplied;
     const newXp = xp + multiplied;
     const newLevel = Math.floor(newXp / 500) + 1;
-    set({ score: newScore, xp: newXp, level: newLevel });
+    // Update score quests
+    const newQuests = quests.map(q => {
+      if (q.type === 'score' && !q.completed) {
+        const newProgress = Math.min(newScore, q.goal);
+        return { ...q, progress: newProgress, completed: newProgress >= q.goal };
+      }
+      return q;
+    });
+    set({ score: newScore, xp: newXp, level: newLevel, quests: newQuests });
   },
   setTimeOfDay: (v) => set({ timeOfDay: v % 24 }),
   setIsInWater: (v) => set({ isInWater: v }),
@@ -97,26 +156,51 @@ export const useGameStore = create<GameState>((set, get) => ({
   addFriend: (friend) => set((s) => ({ friends: [...s.friends, friend] })),
   removeFriend: (id) => set((s) => ({ friends: s.friends.filter((f) => f.id !== id) })),
   collectFood: (id) => {
+    const { foodItems } = get();
+    const food = foodItems.find((f) => f.id === id);
+    if (!food || food.collected) return;
     set((s) => ({
       foodItems: s.foodItems.map((f) => f.id === id ? { ...f, collected: true } : f),
     }));
-    const food = get().foodItems.find((f) => f.id === id);
-    if (food) {
-      const { addScore, setHunger, setHappiness, hunger, happiness, incrementCombo } = get();
-      const bonus = food.type === 'watermelon' ? 50 : food.type === 'sugarcane' ? 35 : 20;
-      addScore(bonus);
-      setHunger(hunger + (food.type === 'watermelon' ? 20 : 15));
-      setHappiness(happiness + 10);
-      incrementCombo();
-    }
+    const { addScore, setHunger, setHappiness, setHealth, hunger, happiness, health, incrementCombo, foodCollected, quests } = get();
+    const bonus = food.type === 'watermelon' ? 50 : food.type === 'sugarcane' ? 35 : 20;
+    const healthBonus = food.type === 'watermelon' ? 15 : food.type === 'sugarcane' ? 10 : 5;
+    addScore(bonus);
+    setHunger(hunger + (food.type === 'watermelon' ? 20 : 15));
+    setHappiness(happiness + 10);
+    setHealth(health + healthBonus);
+    incrementCombo();
+    const newFoodCount = foodCollected + 1;
+    const newQuests = quests.map(q => {
+      if (q.type === 'food' && !q.completed) {
+        const newProgress = Math.min(newFoodCount, q.goal);
+        return { ...q, progress: newProgress, completed: newProgress >= q.goal };
+      }
+      return q;
+    });
+    set({ foodCollected: newFoodCount, quests: newQuests });
   },
   incrementCombo: () => set((s) => ({ combo: s.combo + 1 })),
   resetCombo: () => set({ combo: 0 }),
+  killEnemy: () => {
+    const { killCount, quests, addScore } = get();
+    addScore(150);
+    const newKillCount = killCount + 1;
+    const newQuests = quests.map(q => {
+      if (q.type === 'kill' && !q.completed) {
+        const newProgress = Math.min(newKillCount, q.goal);
+        return { ...q, progress: newProgress, completed: newProgress >= q.goal };
+      }
+      return q;
+    });
+    set({ killCount: newKillCount, quests: newQuests });
+  },
   startGame: () => set({
     phase: 'playing',
     happiness: 80,
     hunger: 60,
     energy: 100,
+    health: 100,
     score: 0,
     timeOfDay: 10,
     isInWater: false,
@@ -126,17 +210,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     combo: 0,
     level: 1,
     xp: 0,
+    killCount: 0,
+    foodCollected: 0,
+    swimTime: 0,
+    quests: INITIAL_QUESTS.map(q => ({ ...q, progress: 0, completed: false })),
+    invincibleTimer: 0,
     totalPlays: get().totalPlays + 1,
   }),
   endGame: () => {
     const { score, bestScore } = get();
-    set({ phase: 'menu', bestScore: Math.max(score, bestScore) });
+    set({ bestScore: Math.max(score, bestScore) });
   },
   tick: (dt) => {
-    const { phase, isInWater, currentAction, hunger, energy, happiness, score, bestScore } = get();
+    const { phase, isInWater, currentAction, hunger, energy, happiness, score, bestScore, invincibleTimer, swimTime, quests } = get();
     if (phase !== 'playing') return;
 
-    // Needs decay over time
     const hungerDecay = currentAction === 'running' ? 0.015 : 0.005;
     const energyDecay = currentAction === 'sleeping' ? -0.1 : currentAction === 'running' ? 0.02 : 0.005;
     const happinessBonus = isInWater ? 0.02 : currentAction === 'sleeping' ? 0.01 : -0.003;
@@ -144,9 +232,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newHunger = Math.max(0, hunger - hungerDecay * dt * 60);
     const newEnergy = Math.max(0, Math.min(100, energy - energyDecay * dt * 60));
     const newHappiness = Math.max(0, Math.min(100, happiness + happinessBonus * dt * 60));
-
-    // Passive score from happiness
     const passiveScore = (newHappiness / 100) * 0.5 * dt * 60;
+    const newInvincible = Math.max(0, invincibleTimer - dt);
+
+    // Swim time for quest
+    const newSwimTime = isInWater ? swimTime + dt : swimTime;
+    const newQuests = quests.map(q => {
+      if (q.type === 'swim' && !q.completed && isInWater) {
+        const newProgress = Math.min(newSwimTime, q.goal);
+        return { ...q, progress: newProgress, completed: newProgress >= q.goal };
+      }
+      return q;
+    });
 
     set({
       hunger: newHunger,
@@ -154,6 +251,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       happiness: newHappiness,
       score: score + passiveScore,
       bestScore: Math.max(score + passiveScore, bestScore),
+      invincibleTimer: newInvincible,
+      swimTime: newSwimTime,
+      quests: newQuests,
     });
 
     // Respawn food

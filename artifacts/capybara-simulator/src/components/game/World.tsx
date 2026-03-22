@@ -128,19 +128,29 @@ function Pond({ position, radius, isDark }: { position: [number, number, number]
   });
   return (
     <group position={position}>
-      {/* Mud ring */}
+      {/* Mud ring around pond edge */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.12, 0]}>
         <ringGeometry args={[radius - 0.5, radius + 1.5, 32]} />
         <meshLambertMaterial color="#6B5A2A" />
       </mesh>
-      {/* Water — BLUE transparent */}
+      {/* Solid blue pool floor so it looks blue through the water */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.58, 0]}>
+        <circleGeometry args={[radius, 32]} />
+        <meshLambertMaterial color={isDark ? '#0D2B6B' : '#1565C0'} />
+      </mesh>
+      {/* Sandy-blue sides of the pond */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]}>
+        <circleGeometry args={[radius, 32]} />
+        <meshLambertMaterial color={isDark ? '#0D3A8C' : '#1976D2'} />
+      </mesh>
+      {/* Water surface — BLUE transparent with shimmer */}
       <mesh ref={waterRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
         <circleGeometry args={[radius, 32]} />
         <meshPhongMaterial
-          color={isDark ? '#1565C0' : '#1E88E5'}
+          color={isDark ? '#1565C0' : '#29B6F6'}
           transparent
-          opacity={0.75}
-          shininess={120}
+          opacity={0.82}
+          shininess={180}
         />
       </mesh>
       {/* Lily pads */}

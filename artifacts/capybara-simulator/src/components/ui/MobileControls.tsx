@@ -20,19 +20,10 @@ interface JoystickState {
   dy: number;
 }
 
-const BTN_CONFIGS = [
-  { key: 'jump',  label: '⬆\nJump',   color: '#4CAF50' },
-  { key: 'shoot', label: '🔫\nShoot',  color: '#F44336' },
-  { key: 'run',   label: '💨\nRun',    color: '#FF9800' },
-  { key: 'eat',   label: '🍉\nEat',    color: '#9C27B0' },
-  { key: 'sleep', label: '😴\nSleep',  color: '#2196F3' },
-];
-
 export function MobileControls() {
   const isMobile = useIsMobile();
   const joystickRef = useRef<JoystickState>({ active: false, startX: 0, startY: 0, dx: 0, dy: 0 });
   const knobRef = useRef<HTMLDivElement>(null);
-  const [pressed, setPressed] = useState<Record<string, boolean>>({});
 
   const onJoystickStart = useCallback((e: React.TouchEvent | React.PointerEvent) => {
     e.preventDefault();
@@ -72,33 +63,15 @@ export function MobileControls() {
     }
   }, []);
 
-  const onBtnDown = useCallback((key: string) => {
-    (mobileInput as any)[key] = true;
-    setPressed(p => ({ ...p, [key]: true }));
-    if (key === 'jump') {
-      setTimeout(() => {
-        (mobileInput as any)[key] = false;
-        setPressed(p => ({ ...p, [key]: false }));
-      }, 120);
-    }
-  }, []);
-
-  const onBtnUp = useCallback((key: string) => {
-    if (key !== 'jump') {
-      (mobileInput as any)[key] = false;
-      setPressed(p => ({ ...p, [key]: false }));
-    }
-  }, []);
-
   if (!isMobile) return null;
 
   return (
     <div style={{
       position: 'fixed', inset: 0, pointerEvents: 'none',
-      zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+      zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start',
       padding: '0 24px 28px',
     }}>
-      {/* Left: Virtual joystick */}
+      {/* Virtual joystick — left side only */}
       <div
         style={{
           width: 120, height: 120, borderRadius: '50%',
@@ -124,37 +97,6 @@ export function MobileControls() {
             pointerEvents: 'none',
           }}
         />
-      </div>
-
-      {/* Right: Action buttons grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, pointerEvents: 'all' }}>
-        {BTN_CONFIGS.map(({ key, label, color }) => (
-          <button
-            key={key}
-            onPointerDown={() => onBtnDown(key)}
-            onPointerUp={() => onBtnUp(key)}
-            onPointerLeave={() => onBtnUp(key)}
-            style={{
-              width: 68, height: 68, borderRadius: 16,
-              background: pressed[key]
-                ? color
-                : `${color}88`,
-              border: `2px solid ${color}`,
-              color: 'white',
-              fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
-              cursor: 'pointer', touchAction: 'none',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              boxShadow: pressed[key] ? `0 0 14px ${color}` : '0 2px 8px rgba(0,0,0,0.4)',
-              transform: pressed[key] ? 'scale(0.93)' : 'scale(1)',
-              transition: 'transform 0.08s, background 0.1s, box-shadow 0.1s',
-              lineHeight: 1.3, whiteSpace: 'pre',
-              userSelect: 'none',
-            }}
-          >
-            {label}
-          </button>
-        ))}
       </div>
     </div>
   );

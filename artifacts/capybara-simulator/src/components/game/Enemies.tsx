@@ -18,6 +18,7 @@ export interface EnemyData {
   stateTimer: number;
   roamAngle: number;
   hitFlash: number;
+  deathTimer: number;
 }
 
 // Shared enemy list for bullet collision
@@ -36,9 +37,21 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
 
   useFrame((_, dt) => {
     t.current += dt;
-    if (!groupRef.current || enemy.state === 'dead') return;
+    if (!groupRef.current) return;
+
+    if (enemy.state === 'dead') {
+      // Sink into ground over 1.5s
+      const progress = 1 - Math.max(0, enemy.deathTimer) / 1.5;
+      const sinkY = enemy.position.y - progress * 1.4;
+      groupRef.current.position.set(enemy.position.x, sinkY, enemy.position.z);
+      groupRef.current.scale.setScalar(Math.max(0.01, 1 - progress * 0.7));
+      groupRef.current.rotation.z = progress * 1.2;
+      return;
+    }
 
     groupRef.current.position.copy(enemy.position);
+    groupRef.current.scale.setScalar(1);
+    groupRef.current.rotation.z = 0;
 
     const toPlayer = playerState.position.clone().sub(enemy.position);
     toPlayer.y = 0;
@@ -47,13 +60,12 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
       groupRef.current.rotation.y = targetAngle;
     }
 
-    // Bob when moving
     if (enemy.state === 'chase') {
       groupRef.current.children[0]?.position.set(0, Math.sin(t.current * 6) * 0.05, 0);
     }
   });
 
-  if (enemy.state === 'dead') return null;
+  if (enemy.state === 'dead' && enemy.deathTimer <= 0) return null;
 
   const isChasing = enemy.state === 'chase' || enemy.state === 'attack';
   const bodyColor = isChasing ? '#4A0A0A' : '#6B1010';
@@ -193,13 +205,18 @@ export function Enemies() {
         stateTimer: 3 + Math.random() * 4,
         roamAngle: Math.random() * Math.PI * 2,
         hitFlash: 0,
+        deathTimer: 0,
       };
 
       setEnemies(prev => [...prev, newEnemy]);
     }
 
     setEnemies(prev => prev.map(enemy => {
-      if (enemy.state === 'dead') return enemy;
+      // Tick down death animation then mark for removal
+      if (enemy.state === 'dead') {
+        const updated = { ...enemy, deathTimer: enemy.deathTimer - dt };
+        return updated;
+      }
 
       const updated = { ...enemy };
       updated.stateTimer -= dt;
@@ -255,12 +272,13 @@ export function Enemies() {
         updated.hitFlash = 1;
         if (updated.health <= 0) {
           updated.state = 'dead';
+          updated.deathTimer = 1.5;
           killEnemy();
         }
       }
 
       return updated;
-    }).filter(e => e.state !== 'dead' || true)); // keep dead for cleanup later
+    }).filter(e => !(e.state === 'dead' && e.deathTimer <= 0))); // remove after death animation
   });
 
   return (

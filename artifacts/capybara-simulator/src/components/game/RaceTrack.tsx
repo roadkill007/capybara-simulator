@@ -391,12 +391,17 @@ function ProximityTrigger() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Enter' && racePhase === 'prompt') {
-        startRace();
-      }
+      if (e.code === 'Enter' && racePhase === 'prompt') startRace();
+    };
+    const onClick = () => {
+      if (racePhase === 'prompt') startRace();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onClick);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onClick);
+    };
   }, [racePhase, startRace]);
 
   useFrame(() => {

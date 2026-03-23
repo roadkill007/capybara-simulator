@@ -71,7 +71,7 @@ export function RaceHUD() {
     return () => cancelAnimationFrame(raf);
   }, [racePhase]);
 
-  // Dismiss on Enter after finish
+  // Dismiss on Enter or tap after finish
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Enter' && racePhase === 'finished') dismissRace();
@@ -100,10 +100,12 @@ export function RaceHUD() {
         }}>
           <div style={{ fontSize: '2rem' }}>🏁</div>
           <div style={{ color: '#FFD700', fontWeight: 900, fontSize: '1.3rem', letterSpacing: 2 }}>RACE ZONE</div>
-          <div style={{ color: 'white', fontWeight: 700, marginTop: 6 }}>Press <kbd style={{
-            background: '#333', border: '1px solid #666', borderRadius: 6, padding: '2px 10px',
-            fontFamily: 'monospace', color: '#FFD700',
-          }}>ENTER</kbd> to race!</div>
+          <div style={{ color: 'white', fontWeight: 700, marginTop: 6 }}>
+            Tap anywhere or press <kbd style={{
+              background: '#333', border: '1px solid #666', borderRadius: 6, padding: '2px 10px',
+              fontFamily: 'monospace', color: '#FFD700',
+            }}>ENTER</kbd> to race!
+          </div>
           <div style={{ color: '#aaa', fontSize: '0.78rem', marginTop: 4 }}>
             🥇 1st = 500pts  🥈 2nd = 300pts  🥉 3rd = 150pts
           </div>
@@ -223,7 +225,7 @@ export function RaceHUD() {
               🌍 Back to World
             </button>
             <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', marginTop: 10 }}>
-              or press Enter
+              or tap / press Enter
             </div>
           </div>
         </div>

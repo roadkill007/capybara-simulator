@@ -76,8 +76,15 @@ export function RaceHUD() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Enter' && racePhase === 'finished') dismissRace();
     };
+    const onTap = () => {
+      if (racePhase === 'finished') dismissRace();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onTap);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onTap);
+    };
   }, [racePhase, dismissRace]);
 
   if (racePhase === 'none') return null;

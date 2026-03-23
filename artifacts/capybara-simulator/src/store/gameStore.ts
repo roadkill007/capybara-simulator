@@ -85,6 +85,7 @@ interface GameState {
   killEnemy: () => void;
   addJump: () => void;
   startRace: () => void;
+  beginRacing: () => void;
   setRacePrompt: (show: boolean) => void;
   setRacePosition: (pos: number) => void;
   finishRace: (position: number) => void;
@@ -278,7 +279,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   setRacePrompt: (show) => set({ racePhase: show ? 'prompt' : 'none' }),
   setRacePosition: (pos) => set({ racePosition: pos }),
 
+  // startRace: prompt → countdown. beginRacing: countdown → racing.
   startRace: () => set({ racePhase: 'countdown', raceCountdown: 3, racePosition: 1, raceFinishTime: null, racePointsEarned: 0 }),
+  beginRacing: () => set({ racePhase: 'racing' }),
 
   finishRace: (position) => {
     const POINTS_TABLE = [500, 300, 150, 50];

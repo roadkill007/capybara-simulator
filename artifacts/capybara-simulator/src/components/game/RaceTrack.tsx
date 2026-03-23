@@ -235,7 +235,7 @@ const raceKeys: Record<string, boolean> = {};
 
 function RaceGameplay() {
   const { camera } = useThree();
-  const { racePhase, startRace, finishRace, setRacePosition } = useGameStore();
+  const { racePhase, beginRacing, finishRace, setRacePosition } = useGameStore();
 
   const playerT = useRef(0);
   const playerLane = useRef(0);
@@ -287,7 +287,7 @@ function RaceGameplay() {
     if (racePhase === 'countdown') {
       countdown.current -= dt;
       if (countdown.current <= 0) {
-        startRace();
+        beginRacing();
       }
       // Position all racers at start staggered
       playerPos.current.copy(racerWorldPos(START_T, 0));

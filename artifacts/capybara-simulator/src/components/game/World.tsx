@@ -2,6 +2,8 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../../store/gameStore';
+import { RealisticPond } from './RealisticWater';
+import { InstancedGrass } from './InstancedGrass';
 
 function Tree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   return (
@@ -499,7 +501,8 @@ export function World() {
         shadow-camera-bottom={-60}
       />
       {isDark && <pointLight position={[0, 8, 0]} intensity={0.4} color="#4466FF" distance={40} />}
-      <fog attach="fog" args={[isDark ? '#0A1A3A' : '#AACCAA', 50, 130]} />
+      {/* Atmospheric distance fog — 3DNature haze system */}
+      <fog attach="fog" args={[isDark ? '#060E22' : (timeOfDay < 8 || timeOfDay > 18 ? '#FF9966' : '#B8D4E8'), 55, 145]} />
 
       {/* Ground — large */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -557,10 +560,13 @@ export function World() {
         <meshLambertMaterial color={isDark ? '#7A5B28' : '#E8B060'} />
       </mesh>
 
-      {/* ── Three ponds — BLUE transparent ─────────────────────────────────── */}
-      <Pond position={[12, 0, -10]} radius={9} isDark={isDark} />
-      <Pond position={[-20, 0, 15]} radius={7} isDark={isDark} />
-      <Pond position={[30, 0, 25]} radius={5} isDark={isDark} />
+      {/* ── Instanced GPU grass (3DNature ecosystem) ────────────────────────── */}
+      <InstancedGrass isDark={isDark} />
+
+      {/* ── Realistic reflective ponds (capybara-swim Water shader) ─────────── */}
+      <RealisticPond position={[12, 0, -10]} radius={9} isDark={isDark} />
+      <RealisticPond position={[-20, 0, 15]} radius={7} isDark={isDark} />
+      <RealisticPond position={[30, 0, 25]} radius={5} isDark={isDark} />
 
       {/* Trees */}
       {trees.map((pos, i) => (

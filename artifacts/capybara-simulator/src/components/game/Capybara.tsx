@@ -5,6 +5,7 @@ import { useGameStore } from '../../store/gameStore';
 import { playerState } from './playerState';
 import { fireBullet } from './Bullets';
 import { mobileInput } from './mobileInput';
+import { getWaterHeight } from './RealisticWater';
 
 const SPEED = 5.5;
 const RUN_SPEED = 10;
@@ -183,6 +184,7 @@ export function Capybara() {
   const shootCooldown = useRef(0);
   const actionCooldown = useRef(0);
   const jumpWasPressed = useRef(false);
+  const gameTime = useRef(0);
 
   const {
     phase, setIsInWater, setCurrentAction, energy, collectFood, foodItems,
@@ -207,6 +209,7 @@ export function Capybara() {
   useFrame((_, dt) => {
     if (phase !== 'playing' || !meshRef.current) return;
 
+    gameTime.current += dt;
     actionCooldown.current = Math.max(0, actionCooldown.current - dt);
     shootCooldown.current = Math.max(0, shootCooldown.current - dt);
 
@@ -267,8 +270,12 @@ export function Capybara() {
         isOnGround.current = false;
       }
     } else {
-      pos.y = Math.max(groundY, pos.y - 9.8 * dt);
-      if (pos.y <= groundY) pos.y = groundY;
+      // Wave-following buoyancy (capybara-swim water physics)
+      const waveY = getWaterHeight(pos.x, pos.z, gameTime.current);
+      const waterSurface = waveY - 0.28; // capybara sits slightly submerged
+      const targetY = Math.max(groundY, waterSurface);
+      // Smooth buoyancy interpolation
+      pos.y += (targetY - pos.y) * Math.min(1, dt * 8);
       velocityY.current = 0;
       isOnGround.current = true;
     }

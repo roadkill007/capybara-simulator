@@ -230,8 +230,151 @@ function FoodDisplay({ food }: { food: { id: string; type: string; position: [nu
   );
 }
 
+// ── Biome-specific objects ──────────────────────────────────────────────────
+
+function Cactus({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh castShadow position={[0, 0.9, 0]}>
+        <cylinderGeometry args={[0.18, 0.22, 1.8, 8]} />
+        <meshLambertMaterial color="#4CAF50" />
+      </mesh>
+      <mesh castShadow position={[-0.4, 1.1, 0]} rotation={[0, 0, 0.6]}>
+        <cylinderGeometry args={[0.1, 0.13, 0.7, 6]} />
+        <meshLambertMaterial color="#4CAF50" />
+      </mesh>
+      <mesh castShadow position={[0.42, 0.95, 0]} rotation={[0, 0, -0.7]}>
+        <cylinderGeometry args={[0.1, 0.13, 0.65, 6]} />
+        <meshLambertMaterial color="#4CAF50" />
+      </mesh>
+      {[0, 0.4, 0.8, 1.3, 1.7].map((y, i) => (
+        <mesh key={i} position={[0, y + 0.1, 0.2]}>
+          <coneGeometry args={[0.04, 0.18, 4]} />
+          <meshLambertMaterial color="#8BC34A" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function AcaciaTree({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh castShadow position={[0, 1.5, 0]} rotation={[0, 0, 0.08]}>
+        <cylinderGeometry args={[0.11, 0.18, 3.0, 6]} />
+        <meshLambertMaterial color="#8D6E63" />
+      </mesh>
+      <mesh castShadow position={[0, 3.1, 0]}>
+        <cylinderGeometry args={[2.2, 2.4, 0.35, 12]} />
+        <meshLambertMaterial color="#558B2F" />
+      </mesh>
+      <mesh castShadow position={[0, 3.35, 0]}>
+        <cylinderGeometry args={[1.4, 2.0, 0.25, 12]} />
+        <meshLambertMaterial color="#689F38" />
+      </mesh>
+    </group>
+  );
+}
+
+function JungleTree({ position, height = 1 }: { position: [number, number, number]; height?: number }) {
+  const h = 3.5 + height * 1.5;
+  return (
+    <group position={position}>
+      <mesh castShadow position={[0, h * 0.45, 0]}>
+        <cylinderGeometry args={[0.18, 0.28, h * 0.9, 7]} />
+        <meshLambertMaterial color="#4E342E" />
+      </mesh>
+      <mesh castShadow position={[0, h * 0.9, 0]}>
+        <coneGeometry args={[1.8, h * 0.6, 8]} />
+        <meshLambertMaterial color="#1B5E20" />
+      </mesh>
+      <mesh castShadow position={[0, h * 0.75, 0]}>
+        <coneGeometry args={[2.2, h * 0.45, 8]} />
+        <meshLambertMaterial color="#2E7D32" />
+      </mesh>
+      {[0, 1, 2, 3].map(i => {
+        const a = (i / 4) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 1.5, h * 0.55, Math.sin(a) * 1.5]} rotation={[0.5, a, 0]}>
+            <boxGeometry args={[0.08, 0.04, 1.4]} />
+            <meshLambertMaterial color="#388E3C" />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function Boulder({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh castShadow position={[0, 0.3, 0]}>
+        <dodecahedronGeometry args={[0.7, 0]} />
+        <meshLambertMaterial color="#78909C" />
+      </mesh>
+      <mesh castShadow position={[0.4, 0.15, 0.3]} rotation={[0.3, 0.8, 0]}>
+        <dodecahedronGeometry args={[0.42, 0]} />
+        <meshLambertMaterial color="#90A4AE" />
+      </mesh>
+      <mesh castShadow position={[-0.3, 0.12, -0.2]} rotation={[0.5, 1.2, 0]}>
+        <dodecahedronGeometry args={[0.32, 0]} />
+        <meshLambertMaterial color="#B0BEC5" />
+      </mesh>
+    </group>
+  );
+}
+
+function PotionDisplay({ potion }: { potion: { id: string; position: [number, number, number]; collected: boolean } }) {
+  const meshRef = useRef<THREE.Group>(null!);
+  const glowRef = useRef<THREE.PointLight>(null!);
+  useFrame(() => {
+    const t = Date.now() * 0.002;
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.025;
+      meshRef.current.position.y = potion.position[1] + Math.sin(t) * 0.18 + 0.6;
+    }
+    if (glowRef.current) {
+      glowRef.current.intensity = 0.6 + Math.sin(t * 2.5) * 0.3;
+    }
+  });
+  if (potion.collected) return null;
+  return (
+    <group ref={meshRef} position={potion.position}>
+      {/* Bottle */}
+      <mesh castShadow position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.12, 0.18, 0.52, 10]} />
+        <meshPhongMaterial color="#9C27B0" transparent opacity={0.85} shininess={180} />
+      </mesh>
+      {/* Neck */}
+      <mesh castShadow position={[0, 0.32, 0]}>
+        <cylinderGeometry args={[0.07, 0.11, 0.2, 8]} />
+        <meshPhongMaterial color="#7B1FA2" transparent opacity={0.9} />
+      </mesh>
+      {/* Cork */}
+      <mesh castShadow position={[0, 0.46, 0]}>
+        <sphereGeometry args={[0.08, 8, 8]} />
+        <meshLambertMaterial color="#FFD700" />
+      </mesh>
+      {/* Inner liquid glow */}
+      <mesh position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.09, 0.14, 0.45, 10]} />
+        <meshBasicMaterial color="#E040FB" transparent opacity={0.4} />
+      </mesh>
+      {/* Point light for glow */}
+      <pointLight ref={glowRef} color="#E040FB" intensity={0.8} distance={4} />
+      {/* Ground halo */}
+      <mesh position={[0, -0.55, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.7, 16]} />
+        <meshBasicMaterial color="#9C27B0" transparent opacity={0.22} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function World() {
-  const { timeOfDay, foodItems } = useGameStore();
+  const { timeOfDay, foodItems, potionItems } = useGameStore();
   const isDark = timeOfDay < 6 || timeOfDay > 20;
 
   const trees = useMemo(() => {
@@ -292,6 +435,51 @@ export function World() {
     return g;
   }, []);
 
+  // ── Biome-specific vegetation ──────────────────────────────────────────────
+  const cacti = useMemo(() => {
+    // SE desert zone: x>18, z>18
+    const positions: [number, number, number][] = [];
+    for (let i = 0; i < 22; i++) {
+      const x = 20 + Math.random() * 36;
+      const z = 20 + Math.random() * 36;
+      positions.push([x, 0, z]);
+    }
+    return positions;
+  }, []);
+
+  const acacias = useMemo(() => {
+    // SW savanna: x<-18, z>18
+    const positions: [number, number, number][] = [];
+    for (let i = 0; i < 18; i++) {
+      const x = -20 - Math.random() * 34;
+      const z = 20 + Math.random() * 34;
+      positions.push([x, 0, z]);
+    }
+    return positions;
+  }, []);
+
+  const jungleTrees = useMemo(() => {
+    // NW jungle: x<-18, z<-18
+    const positions: { pos: [number, number, number]; h: number }[] = [];
+    for (let i = 0; i < 26; i++) {
+      const x = -20 - Math.random() * 34;
+      const z = -20 - Math.random() * 34;
+      positions.push({ pos: [x, 0, z], h: Math.random() });
+    }
+    return positions;
+  }, []);
+
+  const mountainBoulders = useMemo(() => {
+    // NE mountain: x>18, z<-18
+    const positions: { pos: [number, number, number]; s: number }[] = [];
+    for (let i = 0; i < 30; i++) {
+      const x = 20 + Math.random() * 34;
+      const z = -20 - Math.random() * 34;
+      positions.push({ pos: [x, Math.random() * 1.5, z], s: 0.6 + Math.random() * 1.4 });
+    }
+    return positions;
+  }, []);
+
   return (
     <>
       {/* Lighting */}
@@ -332,7 +520,44 @@ export function World() {
         </mesh>
       ))}
 
-      {/* Three ponds — BLUE transparent */}
+      {/* ── Biome ground overlays ─────────────────────────────────────────── */}
+      {/* NE Mountain — grey rocky */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[37, 0.01, -37]}>
+        <planeGeometry args={[42, 42, 12, 12]} />
+        <meshLambertMaterial color={isDark ? '#455A64' : '#607D8B'} />
+      </mesh>
+      {/* Rock outcrops in mountain zone */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0.3]} position={[32, 0.02, -30]}>
+        <planeGeometry args={[14, 10]} />
+        <meshLambertMaterial color={isDark ? '#546E7A' : '#78909C'} />
+      </mesh>
+      {/* NW Jungle — dark mossy green */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[-37, 0.01, -37]}>
+        <planeGeometry args={[42, 42, 12, 12]} />
+        <meshLambertMaterial color={isDark ? '#1A2E1A' : '#2E5E2E'} />
+      </mesh>
+      {/* SW Savanna — dry yellow grass */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[-37, 0.01, 37]}>
+        <planeGeometry args={[42, 42, 12, 12]} />
+        <meshLambertMaterial color={isDark ? '#6D5B2A' : '#C9A84C'} />
+      </mesh>
+      {/* Dry cracked ground detail */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0.7]} position={[-42, 0.02, 40]}>
+        <planeGeometry args={[18, 12]} />
+        <meshLambertMaterial color={isDark ? '#5D4B1F' : '#B8922A'} />
+      </mesh>
+      {/* SE Desert — sandy orange */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[37, 0.01, 37]}>
+        <planeGeometry args={[42, 42, 12, 12]} />
+        <meshLambertMaterial color={isDark ? '#6D5022' : '#D4A055'} />
+      </mesh>
+      {/* Sand dunes */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0.4]} position={[43, 0.02, 44]}>
+        <planeGeometry args={[16, 10]} />
+        <meshLambertMaterial color={isDark ? '#7A5B28' : '#E8B060'} />
+      </mesh>
+
+      {/* ── Three ponds — BLUE transparent ─────────────────────────────────── */}
       <Pond position={[12, 0, -10]} radius={9} isDark={isDark} />
       <Pond position={[-20, 0, 15]} radius={7} isDark={isDark} />
       <Pond position={[30, 0, 25]} radius={5} isDark={isDark} />
@@ -370,6 +595,58 @@ export function World() {
       {/* Food items */}
       {foodItems.map(food => (
         <FoodDisplay key={food.id} food={food} />
+      ))}
+
+      {/* ── Potions (giant power-ups) ──────────────────────────────────────── */}
+      {potionItems && potionItems.map(potion => (
+        <PotionDisplay key={potion.id} potion={potion} />
+      ))}
+
+      {/* ── Biome vegetation ───────────────────────────────────────────────── */}
+      {/* Desert: cacti */}
+      {cacti.map((pos, i) => (
+        <Cactus key={`cactus-${i}`} position={pos} />
+      ))}
+
+      {/* Savanna: flat acacia trees */}
+      {acacias.map((pos, i) => (
+        <AcaciaTree key={`acacia-${i}`} position={pos} />
+      ))}
+
+      {/* Jungle: tall dense trees + hanging vines */}
+      {jungleTrees.map(({ pos, h }, i) => (
+        <JungleTree key={`jungle-${i}`} position={pos} height={h} />
+      ))}
+
+      {/* Mountain: clusters of boulders */}
+      {mountainBoulders.map(({ pos, s }, i) => (
+        <Boulder key={`boulder-${i}`} position={pos} scale={s} />
+      ))}
+
+      {/* Biome border: mountain cliff wall */}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={`cliff-${i}`} castShadow position={[18 + i * 5.5, 1.0 + Math.sin(i * 1.3) * 0.5, -18]}>
+          <boxGeometry args={[4.5 + Math.sin(i) * 1.5, 2.0 + Math.sin(i * 0.8) * 1.2, 1.2]} />
+          <meshLambertMaterial color="#78909C" />
+        </mesh>
+      ))}
+
+      {/* Savanna: dry riverbeds */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0.3]} position={[-30, 0.03, 30]}>
+        <planeGeometry args={[3, 18]} />
+        <meshLambertMaterial color="#A0856E" />
+      </mesh>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, -0.1]} position={[-42, 0.03, 38]}>
+        <planeGeometry args={[2.5, 14]} />
+        <meshLambertMaterial color="#9E7B5E" />
+      </mesh>
+
+      {/* Desert: dune mounds */}
+      {[{x:38,z:38},{x:48,z:32},{x:42,z:50},{x:52,z:46}].map((d,i) => (
+        <mesh key={`dune-${i}`} castShadow receiveShadow position={[d.x, 0.5 + i * 0.15, d.z]}>
+          <sphereGeometry args={[3 + i * 0.5, 10, 6]} />
+          <meshLambertMaterial color="#D4A055" />
+        </mesh>
       ))}
 
       {/* Path from spawn */}

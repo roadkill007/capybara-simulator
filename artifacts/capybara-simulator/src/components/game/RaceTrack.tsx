@@ -5,12 +5,12 @@ import { useGameStore } from '../../store/gameStore';
 import { playerState } from './playerState';
 
 // ─── Track geometry constants ────────────────────────────────────────────────
-const CX = 22, CZ = -38;        // oval centre in world space
-const RX = 20, RZ = 13;         // semi-axes
-const ROAD_W = 11;               // track width in units
-const SEGMENTS = 64;
+const CX = 10, CZ = -38;        // oval centre in world space
+const RX = 30, RZ = 18;         // semi-axes — bigger oval (1.6× longer track)
+const ROAD_W = 12;               // track width in units
+const SEGMENTS = 80;
 const START_T = 0;               // t parameter at start/finish line
-const START_POS = new THREE.Vector3(CX + RX, 0, CZ); // [42, 0, -38]
+const START_POS = new THREE.Vector3(CX + RX, 0, CZ); // [40, 0, -38]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function trackPos(t: number, y = 0.15): THREE.Vector3 {
@@ -179,11 +179,11 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
         </mesh>
       </group>
 
-      {/* ── Grandstands ── */}
+      {/* ── Grandstands (inside oval to stay within world bounds) ── */}
       {[
-        [CX, -4, CZ - RZ - 3, '#4444BB'],
-        [CX - 8, -4, CZ - RZ - 3, '#BB4444'],
-        [CX + 8, -4, CZ - RZ - 3, '#44BB44'],
+        [CX, -4, CZ, '#4444BB'],
+        [CX - 10, -4, CZ + 5, '#BB4444'],
+        [CX + 10, -4, CZ + 5, '#44BB44'],
       ].map(([x, _y, z, color], i) => (
         <group key={i} position={[x as number, 0, z as number]}>
           {/* Bleachers base */}
@@ -222,11 +222,11 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
 }
 
 // ─── Race gameplay ─────────────────────────────────────────────────────────────
-const PLAYER_BASE_SPEED = 0.44;
+const PLAYER_BASE_SPEED = 0.28;  // scaled for bigger oval
 const AI_CONFIGS = [
-  { color: '#FF3333', label: 'RED', lane: 2.2,  baseSpeed: 0.38 },
-  { color: '#3366FF', label: 'BLU', lane: -2.2, baseSpeed: 0.43 },
-  { color: '#22BB44', label: 'GRN', lane: 4.4,  baseSpeed: 0.40 },
+  { color: '#FF3333', label: 'RED', lane: 2.2,  baseSpeed: 0.24 },
+  { color: '#3366FF', label: 'BLU', lane: -2.2, baseSpeed: 0.27 },
+  { color: '#22BB44', label: 'GRN', lane: 4.4,  baseSpeed: 0.25 },
 ];
 const POINTS = [500, 300, 150, 50];
 const MEDAL = ['🥇', '🥈', '🥉', '💀'];

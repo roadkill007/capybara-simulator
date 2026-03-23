@@ -10,13 +10,11 @@ interface Bullet {
   position: THREE.Vector3;
   velocity: THREE.Vector3;
   life: number;
-  trail: THREE.Vector3[];
 }
 
 let bulletId = 0;
 const bullets: Bullet[] = [];
 
-// Exposed for Capybara to call
 export function fireBullet() {
   const dir = playerState.facing.clone().normalize();
   const spawnPos = playerState.position.clone().add(new THREE.Vector3(0, 0.4, 0)).addScaledVector(dir, 0.8);
@@ -24,19 +22,19 @@ export function fireBullet() {
     id: bulletId++,
     position: spawnPos,
     velocity: dir.multiplyScalar(28),
-    life: 2.5,
-    trail: [],
+    life: 2.0,
   });
 }
 
 export function Bullets() {
-  const meshRefs = useRef<Map<number, THREE.Mesh>>(new Map());
+  const groupRefs = useRef<Map<number, THREE.Group>>(new Map());
   const { phase } = useGameStore();
-  const frameCount = useRef(0);
 
-  useFrame((scene, dt) => {
-    if (phase !== 'playing') return;
-    frameCount.current++;
+  useFrame((_, dt) => {
+    if (phase !== 'playing') {
+      bullets.length = 0;
+      return;
+    }
 
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
@@ -48,6 +46,14 @@ export function Bullets() {
       }
 
       b.position.addScaledVector(b.velocity, dt);
+      // Apply gravity so bullets arc downward
+      b.velocity.y -= 12 * dt;
+
+      // Remove bullets that fall below ground
+      if (b.position.y < -2) {
+        bullets.splice(i, 1);
+        continue;
+      }
 
       // Hit detection vs enemies
       let hit = false;
@@ -55,43 +61,38 @@ export function Bullets() {
         if (enemy.state === 'dead') continue;
         const dist = b.position.distanceTo(enemy.position);
         if (dist < 1.2) {
-          enemy.health = Math.max(0, enemy.health - 34); // 3 shots to kill
+          enemy.health = Math.max(0, enemy.health - 34);
           bullets.splice(i, 1);
           hit = true;
           break;
         }
       }
+      if (hit) continue;
 
-      if (!hit) {
-        const mesh = meshRefs.current.get(b.id);
-        if (mesh) {
-          mesh.position.copy(b.position);
-        }
-      }
+      // Update 3D group position via ref
+      const grp = groupRefs.current.get(b.id);
+      if (grp) grp.position.copy(b.position);
     }
-
-    // Force update
-    scene.invalidate?.();
   });
 
   return (
     <>
       {bullets.map(b => (
-        <group key={b.id}>
-          <mesh
-            ref={(mesh) => {
-              if (mesh) meshRefs.current.set(b.id, mesh);
-              else meshRefs.current.delete(b.id);
-            }}
-            position={b.position.toArray() as [number, number, number]}
-          >
-            <sphereGeometry args={[0.14, 8, 8]} />
+        <group
+          key={b.id}
+          ref={(grp) => {
+            if (grp) groupRefs.current.set(b.id, grp);
+            else groupRefs.current.delete(b.id);
+          }}
+          position={b.position.toArray() as [number, number, number]}
+        >
+          <mesh>
+            <sphereGeometry args={[0.14, 6, 6]} />
             <meshBasicMaterial color="#FFD700" />
           </mesh>
-          {/* Glow */}
-          <mesh position={b.position.toArray() as [number, number, number]}>
-            <sphereGeometry args={[0.22, 6, 6]} />
-            <meshBasicMaterial color="#FF8C00" transparent opacity={0.4} />
+          <mesh>
+            <sphereGeometry args={[0.22, 5, 5]} />
+            <meshBasicMaterial color="#FF8C00" transparent opacity={0.35} />
           </mesh>
         </group>
       ))}

@@ -2,8 +2,6 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../../store/gameStore';
-import { RealisticPond } from './RealisticWater';
-import { InstancedGrass } from './InstancedGrass';
 
 function Tree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   return (
@@ -560,13 +558,10 @@ export function World() {
         <meshLambertMaterial color={isDark ? '#7A5B28' : '#E8B060'} />
       </mesh>
 
-      {/* ── Instanced GPU grass (3DNature ecosystem) ────────────────────────── */}
-      <InstancedGrass isDark={isDark} />
-
-      {/* ── Realistic reflective ponds (capybara-swim Water shader) ─────────── */}
-      <RealisticPond position={[12, 0, -10]} radius={9} isDark={isDark} />
-      <RealisticPond position={[-20, 0, 15]} radius={7} isDark={isDark} />
-      <RealisticPond position={[30, 0, 25]} radius={5} isDark={isDark} />
+      {/* ── Ponds — simple blue water ─────────────────────────────────────── */}
+      <Pond position={[12, 0, -10]} radius={9} isDark={isDark} />
+      <Pond position={[-20, 0, 15]} radius={7} isDark={isDark} />
+      <Pond position={[30, 0, 25]} radius={5} isDark={isDark} />
 
       {/* Trees */}
       {trees.map((pos, i) => (

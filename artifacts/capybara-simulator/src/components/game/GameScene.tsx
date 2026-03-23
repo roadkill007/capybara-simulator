@@ -35,9 +35,9 @@ export function GameScene() {
   return (
     <div className="fixed inset-0" style={{ touchAction: 'none' }}>
       <Canvas
-        shadows
-        camera={{ position: [0, 6, -12], fov: 65, near: 0.1, far: 280 }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        camera={{ position: [0, 6, -12], fov: 65, near: 0.3, far: 220 }}
+        gl={{ antialias: false, powerPreference: 'high-performance', precision: 'mediump' }}
+        dpr={[1, 1.5]}
         onCreated={({ gl }) => { if (!gl.getContext()) setWebglError(true); }}
         onError={() => setWebglError(true)}
       >

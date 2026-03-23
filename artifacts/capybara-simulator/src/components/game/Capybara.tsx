@@ -5,7 +5,6 @@ import { useGameStore } from '../../store/gameStore';
 import { playerState } from './playerState';
 import { fireBullet } from './Bullets';
 import { mobileInput } from './mobileInput';
-import { getWaterHeight } from './RealisticWater';
 
 const SPEED = 5.5;
 const RUN_SPEED = 10;
@@ -16,6 +15,20 @@ const GRAVITY = 20;
 
 const keys: Record<string, boolean> = {};
 const jumpPressed = { current: false };
+
+// Pond definitions (must match World.tsx pond positions)
+const PONDS: [number, number, number][] = [
+  [12, -10, 9],   // [cx, cz, radius]
+  [-20, 15, 7],
+  [30, 25, 6],
+];
+
+function isInPond(x: number, z: number): boolean {
+  for (const [px, pz, pr] of PONDS) {
+    if ((x - px) * (x - px) + (z - pz) * (z - pz) < pr * pr) return true;
+  }
+  return false;
+}
 
 function CapybaraBody({ action, isInWater, invincible, isGiant }: {
   action: string; isInWater: boolean; invincible: boolean; isGiant: boolean;
@@ -184,7 +197,7 @@ export function Capybara() {
   const shootCooldown = useRef(0);
   const actionCooldown = useRef(0);
   const jumpWasPressed = useRef(false);
-  const gameTime = useRef(0);
+  const camZoom = useRef(1.0); // scroll-to-zoom: 0.3 (close) → 2.5 (far)
 
   const {
     phase, setIsInWater, setCurrentAction, energy, collectFood, foodItems,
@@ -206,10 +219,43 @@ export function Capybara() {
     };
   }, []);
 
+  // Scroll-to-zoom + pinch-to-zoom
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      camZoom.current = THREE.MathUtils.clamp(camZoom.current + e.deltaY * 0.002, 0.3, 2.5);
+    };
+    let prevPinchDist = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        prevPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const d = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        camZoom.current = THREE.MathUtils.clamp(camZoom.current - (d - prevPinchDist) * 0.005, 0.3, 2.5);
+        prevPinchDist = d;
+      }
+    };
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+    };
+  }, []);
+
   useFrame((_, dt) => {
     if (phase !== 'playing' || !meshRef.current) return;
 
-    gameTime.current += dt;
     actionCooldown.current = Math.max(0, actionCooldown.current - dt);
     shootCooldown.current = Math.max(0, shootCooldown.current - dt);
 
@@ -217,11 +263,9 @@ export function Capybara() {
     const giant = isGiant;
     const giantSpeed = giant ? 1.6 : 1;
 
-    // --- Rotation: keyboard OR mobile joystick ---
+    // Rotation: keyboard OR mobile joystick
     const joyX = mobileInput.joystickX;
     const joyY = mobileInput.joystickY;
-    const rotateKbd = (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 0 : 0)
-                    + (keys['KeyD'] || keys['ArrowRight'] ? -1 : 0);
 
     if (keys['KeyA'] || keys['ArrowLeft']) rotationRef.current += ROTATION_SPEED * dt;
     if (keys['KeyD'] || keys['ArrowRight']) rotationRef.current -= ROTATION_SPEED * dt;
@@ -234,7 +278,8 @@ export function Capybara() {
     );
 
     const isRunning = (keys['ShiftLeft'] || keys['ShiftRight'] || mobileInput.run) && energy > 10;
-    const inWater = pos.y < 0.15;
+    // Use pond-based water detection — not Y position
+    const inWater = isInPond(pos.x, pos.z);
     const speed = (inWater ? SWIM_SPEED : isRunning ? RUN_SPEED : SPEED) * giantSpeed;
 
     // Movement: keyboard + mobile joystick
@@ -249,7 +294,7 @@ export function Capybara() {
     pos.x = Math.max(-58, Math.min(58, pos.x));
     pos.z = Math.max(-58, Math.min(58, pos.z));
 
-    // Jump + gravity
+    // Jump + gravity — only when not in water
     const groundY = getGroundHeight(pos.x, pos.z);
     const wantJump = (jumpPressed.current || mobileInput.jump) && isOnGround.current && !inWater;
     if (wantJump) {
@@ -270,12 +315,9 @@ export function Capybara() {
         isOnGround.current = false;
       }
     } else {
-      // Wave-following buoyancy (capybara-swim water physics)
-      const waveY = getWaterHeight(pos.x, pos.z, gameTime.current);
-      const waterSurface = waveY - 0.28; // capybara sits slightly submerged
-      const targetY = Math.max(groundY, waterSurface);
-      // Smooth buoyancy interpolation
-      pos.y += (targetY - pos.y) * Math.min(1, dt * 8);
+      // Smooth buoyancy — capybara bobs at water surface
+      const waterSurface = -0.18;
+      pos.y += (waterSurface - pos.y) * Math.min(1, dt * 8);
       velocityY.current = 0;
       isOnGround.current = true;
     }
@@ -334,9 +376,10 @@ export function Capybara() {
       if (pos.distanceTo(pp) < (giant ? 4 : 1.5)) collectPotion(potion.id);
     });
 
-    // Camera — pull back more for giant
-    const camDist = giant ? 20 : 11;
-    const camHeight = giant ? 9 : 5;
+    // Camera: follow with scroll-wheel zoom
+    const zoom = camZoom.current;
+    const camDist = (giant ? 20 : 11) * zoom;
+    const camHeight = (giant ? 9 : 5) * Math.max(0.5, zoom * 0.8 + 0.2);
     const camOffset = new THREE.Vector3(0, camHeight, -camDist);
     camOffset.applyEuler(new THREE.Euler(0, rotationRef.current, 0));
     const targetCamPos = pos.clone().add(camOffset);
@@ -352,42 +395,10 @@ export function Capybara() {
 }
 
 export function getGroundHeight(x: number, z: number): number {
-  // Ponds
-  const ponds = [[12, -10, 9], [-20, 15, 7], [30, 25, 6]] as [number, number, number][];
-  for (const [px, pz, pr] of ponds) {
+  // Flat ground everywhere — ponds dip below surface
+  for (const [px, pz, pr] of PONDS) {
     const d = Math.sqrt((x - px) ** 2 + (z - pz) ** 2);
-    if (d < pr) return -0.6 + d * 0.06;
+    if (d < pr) return -0.5; // pond floor
   }
-
-  // Biome-based terrain
-  const nx = x / 58;
-  const nz = z / 58;
-
-  // Mountain biome (NE: x>15, z<-15) — higher terrain
-  if (x > 15 && z < -15) {
-    const mh = Math.sin(x * 0.2) * Math.cos(z * 0.2) * 2.5 + Math.sin(x * 0.5) * 1.2;
-    return Math.max(0, mh);
-  }
-
-  // Savanna biome (SW: x<-15, z>15) — gentle rolling
-  if (x < -15 && z > 15) {
-    const sh = Math.sin(x * 0.12) * Math.cos(z * 0.12) * 0.8;
-    return Math.max(-0.2, sh);
-  }
-
-  // Desert biome (SE: x>20, z>20) — mostly flat with dunes
-  if (x > 20 && z > 20) {
-    const dh = Math.sin(x * 0.25 + 1.3) * 0.5 + Math.cos(z * 0.3) * 0.4;
-    return Math.max(-0.1, dh);
-  }
-
-  // Jungle biome (NW: x<-15, z<-15) — uneven
-  if (x < -15 && z < -15) {
-    const jh = Math.sin(x * 0.18) * Math.cos(z * 0.18) * 1.0 + Math.sin((x + z) * 0.1) * 0.5;
-    return Math.max(-0.1, jh);
-  }
-
-  // Central meadow — gentle hills
-  const h = Math.sin(x * 0.15) * Math.cos(z * 0.15) * 0.6 + Math.sin(x * 0.3 + 1) * Math.cos(z * 0.25 + 2) * 0.3;
-  return Math.max(-0.5, h);
+  return 0; // flat ground
 }

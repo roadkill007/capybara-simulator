@@ -1,127 +1,285 @@
 import { useGameStore } from '../../store/gameStore';
 
+const FEATURES = [
+  { icon: '🏊', label: 'Swim', sub: 'Relax in ponds' },
+  { icon: '🍉', label: 'Eat', sub: 'Heal & grow' },
+  { icon: '💥', label: 'Shoot', sub: 'Blast enemies' },
+  { icon: '🏎️', label: 'Race', sub: 'Beat rivals' },
+  { icon: '🌿', label: 'Explore', sub: 'Open world' },
+  { icon: '⚡', label: 'Giant', sub: 'Power up' },
+];
+
+const CONTROLS = [
+  ['WASD / Arrows', 'Move'],
+  ['Shift', 'Run'],
+  ['Space / F', 'Shoot'],
+  ['E', 'Eat 🍉'],
+  ['Z', 'Sleep 😴'],
+  ['Scroll', 'Zoom camera'],
+];
+
 export function MainMenu() {
   const { phase, startGame, score, bestScore, totalPlays, killCount, foodCollected } = useGameStore();
 
   if (phase !== 'menu' && phase !== 'dead') return null;
 
   const isDead = phase === 'dead';
+  const hasStats = totalPlays > 0;
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
       style={{
+        position: 'fixed', inset: 0,
         background: isDead
-          ? 'linear-gradient(135deg, #1a0a0a 0%, #3d0f0f 50%, #1a0808 100%)'
-          : 'linear-gradient(135deg, #1a3a1a 0%, #2d5a1e 40%, #1a4a2e 70%, #0f2a18 100%)',
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
+          ? 'linear-gradient(160deg, #0f0808 0%, #2a0a0a 50%, #1a0505 100%)'
+          : 'linear-gradient(160deg, #071a0e 0%, #0d2e18 40%, #0a2215 70%, #061408 100%)',
+        fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
-      {/* Background particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full opacity-15 animate-pulse"
-            style={{
-              width: `${20 + Math.sin(i * 2.3) * 15}px`,
-              height: `${20 + Math.sin(i * 2.3) * 15}px`,
-              left: `${(i * 7 + 5) % 95}%`,
-              top: `${(i * 11 + 3) % 90}%`,
-              background: isDead
-                ? ['#FF4444', '#CC0000', '#FF8800'][i % 3]
-                : ['#4CAF50', '#8BC34A', '#FFD700', '#FF9800'][i % 4],
-              animationDelay: `${i * 0.3}s`,
-            }}
-          />
+      {/* Animated background blobs */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {[
+          { x: '10%', y: '15%', size: 280, color: isDead ? '#FF222220' : '#16A34A20', delay: '0s' },
+          { x: '75%', y: '60%', size: 200, color: isDead ? '#CC000018' : '#22C55E18', delay: '1.5s' },
+          { x: '50%', y: '85%', size: 160, color: isDead ? '#FF440015' : '#4ADE8015', delay: '0.8s' },
+          { x: '85%', y: '10%', size: 120, color: isDead ? '#FF000012' : '#86EFAC12', delay: '2s' },
+        ].map((blob, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            left: blob.x, top: blob.y,
+            width: blob.size, height: blob.size,
+            borderRadius: '50%',
+            background: blob.color,
+            filter: 'blur(60px)',
+            animation: `blobPulse 4s ease-in-out infinite`,
+            animationDelay: blob.delay,
+            transform: 'translate(-50%, -50%)',
+          }} />
         ))}
       </div>
 
-      <div className="relative text-center px-8 py-10 max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="mb-5">
-          <div className="text-6xl mb-2" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>
+      <style>{`
+        @keyframes blobPulse {
+          0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
+          50% { opacity: 1; transform: translate(-50%,-50%) scale(1.12); }
+        }
+        @keyframes floatUp {
+          0% { opacity: 0; transform: translateY(24px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes capyBounce {
+          0%, 100% { transform: translateY(0) rotate(-2deg); }
+          50% { transform: translateY(-10px) rotate(2deg); }
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+      `}</style>
+
+      {/* Main card */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: 460,
+        margin: '0 auto',
+        padding: '32px 24px 28px',
+        animation: 'floatUp 0.5s ease-out both',
+      }}>
+
+        {/* ── HEADER ── */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{
+            fontSize: '5rem', lineHeight: 1,
+            animation: 'capyBounce 2.4s ease-in-out infinite',
+            display: 'inline-block',
+            filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.6))',
+          }}>
             {isDead ? '💀' : '🦫'}
           </div>
-          <h1 className="text-4xl font-black text-white mb-1" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.8)', letterSpacing: '-1px' }}>
+
+          <h1 style={{
+            margin: '10px 0 2px',
+            fontSize: 'clamp(2rem, 7vw, 2.8rem)',
+            fontWeight: 900,
+            letterSpacing: '-1px',
+            color: 'white',
+            textShadow: '0 4px 20px rgba(0,0,0,0.8)',
+          }}>
             {isDead ? 'You Died!' : 'Capybara'}
           </h1>
-          <h2 className="text-2xl font-bold" style={{ color: isDead ? '#FF4444' : '#8BC34A', letterSpacing: '3px' }}>
-            {isDead ? 'DEFEATED BY ENEMIES' : 'SIMULATOR 3D'}
-          </h2>
-          {!isDead && <p className="text-green-300/60 text-sm mt-1 italic">The most addictive capybara game ever made</p>}
+          <div style={{
+            fontSize: 'clamp(0.95rem, 3.5vw, 1.25rem)',
+            fontWeight: 800,
+            letterSpacing: '4px',
+            textTransform: 'uppercase',
+            background: isDead
+              ? 'linear-gradient(90deg, #FF4444, #FF8800, #FF4444)'
+              : 'linear-gradient(90deg, #4ADE80, #86EFAC, #22C55E, #86EFAC, #4ADE80)',
+            backgroundSize: '200% auto',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            animation: 'shimmer 3s linear infinite',
+          }}>
+            {isDead ? 'DEFEATED' : 'SIMULATOR 3D'}
+          </div>
+          {!isDead && (
+            <p style={{ color: 'rgba(134,239,172,0.5)', fontSize: '0.8rem', marginTop: 4, fontStyle: 'italic' }}>
+              The most addictive capybara game ever made
+            </p>
+          )}
         </div>
 
-        {/* Stats panel */}
-        {(totalPlays > 0) && (
-          <div
-            className="mb-5 px-4 py-3 rounded-2xl grid grid-cols-3 gap-2"
-            style={{ background: 'rgba(0,0,0,0.45)', border: `1px solid ${isDead ? 'rgba(255,50,50,0.3)' : 'rgba(139,197,74,0.3)'}` }}
-          >
-            <div className="text-center">
-              <div className="text-yellow-300 font-bold text-lg">{Math.floor(isDead ? score : bestScore).toLocaleString()}</div>
-              <div className="text-white/50 text-xs">{isDead ? 'Score' : 'Best Score'}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-red-400 font-bold text-lg">{killCount}</div>
-              <div className="text-white/50 text-xs">Kills</div>
-            </div>
-            <div className="text-center">
-              <div className="text-green-300 font-bold text-lg">{foodCollected}</div>
-              <div className="text-white/50 text-xs">Food Eaten</div>
-            </div>
+        {/* ── STATS (shown after first play) ── */}
+        {hasStats && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 8,
+            marginBottom: 20,
+            padding: '14px 12px',
+            borderRadius: 16,
+            background: 'rgba(255,255,255,0.04)',
+            border: isDead ? '1px solid rgba(255,80,80,0.2)' : '1px solid rgba(74,222,128,0.2)',
+          }}>
+            {[
+              { value: Math.floor(isDead ? score : bestScore).toLocaleString(), label: isDead ? 'Score' : 'Best', color: '#FDE047' },
+              { value: killCount, label: 'Kills', color: '#F87171' },
+              { value: foodCollected, label: 'Fed', color: '#86EFAC' },
+            ].map(({ value, label, color }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <div style={{ color, fontWeight: 900, fontSize: 'clamp(1.1rem, 4vw, 1.4rem)', lineHeight: 1 }}>{value}</div>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Play button */}
+        {/* ── PLAY BUTTON ── */}
         <button
           onClick={startGame}
-          className="w-full py-4 rounded-2xl text-white font-black text-xl mb-3 transition-all duration-200 hover:scale-105 active:scale-95"
           style={{
+            display: 'block',
+            width: '100%',
+            padding: '16px 0',
+            borderRadius: 18,
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: 'white',
+            fontWeight: 900,
+            fontSize: 'clamp(1rem, 4vw, 1.2rem)',
+            letterSpacing: 1,
+            cursor: 'pointer',
+            marginBottom: 16,
             background: isDead
-              ? 'linear-gradient(135deg, #CC2222, #FF4444)'
-              : 'linear-gradient(135deg, #4CAF50, #8BC34A)',
+              ? 'linear-gradient(135deg, #991B1B, #DC2626, #991B1B)'
+              : 'linear-gradient(135deg, #15803D, #22C55E, #16A34A)',
             boxShadow: isDead
-              ? '0 6px 24px rgba(204,34,34,0.5),0 2px 4px rgba(0,0,0,0.3)'
-              : '0 6px 24px rgba(76,175,80,0.5),0 2px 4px rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.2)',
+              ? '0 6px 32px rgba(220,38,38,0.45), inset 0 1px 0 rgba(255,255,255,0.1)'
+              : '0 6px 32px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+            transition: 'transform 0.12s, box-shadow 0.12s',
           }}
+          onMouseEnter={e => { (e.target as HTMLElement).style.transform = 'scale(1.02)'; }}
+          onMouseLeave={e => { (e.target as HTMLElement).style.transform = 'scale(1)'; }}
+          onMouseDown={e => { (e.target as HTMLElement).style.transform = 'scale(0.97)'; }}
+          onMouseUp={e => { (e.target as HTMLElement).style.transform = 'scale(1.02)'; }}
         >
           {isDead ? '🔄 Try Again' : totalPlays === 0 ? '🌿 Start Adventure' : '🌿 Play Again'}
         </button>
 
-        {/* Features (only on main menu) */}
+        {/* ── FEATURES grid (first menu only) ── */}
         {!isDead && (
           <>
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              {[
-                { icon: '🏊', label: 'Swim & Relax' },
-                { icon: '🍉', label: 'Eat & Heal' },
-                { icon: '💥', label: 'Shoot Enemies' },
-              ].map(({ icon, label }) => (
-                <div key={label} className="px-2 py-3 rounded-xl text-center" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div className="text-2xl mb-1">{icon}</div>
-                  <div className="text-white/70 text-xs">{label}</div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 8,
+              marginBottom: 14,
+            }}>
+              {FEATURES.map(({ icon, label, sub }) => (
+                <div key={label} style={{
+                  textAlign: 'center',
+                  padding: '10px 6px',
+                  borderRadius: 14,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  <div style={{ fontSize: '1.6rem', marginBottom: 2 }}>{icon}</div>
+                  <div style={{ color: 'white', fontWeight: 700, fontSize: '0.78rem' }}>{label}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{sub}</div>
                 </div>
               ))}
             </div>
-            <div className="px-4 py-3 rounded-xl" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div className="text-white/50 text-xs text-center mb-2 uppercase tracking-widest">Controls</div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/70">
-                <span>WASD / ⬆️⬇️⬅️➡️ — Move</span>
-                <span>Shift — Run</span>
-                <span>Space / F — 💥 Shoot</span>
-                <span>E — Eat 🍉</span>
-                <span>Z — Sleep 😴</span>
-                <span>Walk into water — Swim</span>
+
+            {/* Controls */}
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}>
+              <div style={{
+                color: 'rgba(255,255,255,0.35)',
+                fontSize: '0.65rem',
+                textTransform: 'uppercase',
+                letterSpacing: 2,
+                marginBottom: 8,
+                textAlign: 'center',
+              }}>Controls</div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap: '4px 12px',
+                alignItems: 'center',
+              }}>
+                {CONTROLS.map(([key, action]) => (
+                  <>
+                    <kbd key={`k-${key}`} style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      padding: '2px 7px',
+                      fontSize: '0.68rem',
+                      fontFamily: 'monospace',
+                      color: '#FDE047',
+                      whiteSpace: 'nowrap',
+                      justifySelf: 'start',
+                    }}>{key}</kbd>
+                    <span key={`a-${key}`} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem' }}>{action}</span>
+                  </>
+                ))}
               </div>
             </div>
           </>
         )}
 
+        {/* High score badge */}
         {isDead && bestScore > 0 && score >= bestScore && (
-          <div className="mt-3 text-yellow-300 font-bold animate-pulse">🏆 New High Score!</div>
+          <div style={{
+            marginTop: 14,
+            textAlign: 'center',
+            color: '#FDE047',
+            fontWeight: 800,
+            fontSize: '1rem',
+            animation: 'blobPulse 1.2s ease-in-out infinite',
+          }}>
+            🏆 New High Score!
+          </div>
         )}
+
+        {/* Mobile note */}
+        <p style={{
+          textAlign: 'center',
+          color: 'rgba(255,255,255,0.2)',
+          fontSize: '0.65rem',
+          marginTop: 16,
+        }}>
+          📱 Mobile: use joystick — pinch to zoom camera
+        </p>
       </div>
     </div>
   );

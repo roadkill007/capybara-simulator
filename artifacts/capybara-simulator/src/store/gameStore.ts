@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 export type GamePhase = 'menu' | 'playing' | 'dead';
+export type RacePhase = 'none' | 'prompt' | 'countdown' | 'racing' | 'finished';
 export type CapybaraAction = 'idle' | 'walking' | 'running' | 'swimming' | 'eating' | 'sleeping' | 'happy' | 'shooting' | 'jumping';
 
 export interface Friend {
@@ -59,6 +60,11 @@ interface GameState {
   invincibleTimer: number;
   isGiant: boolean;
   giantTimer: number;
+  racePhase: RacePhase;
+  raceCountdown: number;
+  racePosition: number;
+  raceFinishTime: number | null;
+  racePointsEarned: number;
 
   setPhase: (phase: GamePhase) => void;
   setHappiness: (v: number) => void;
@@ -78,6 +84,11 @@ interface GameState {
   resetCombo: () => void;
   killEnemy: () => void;
   addJump: () => void;
+  startRace: () => void;
+  setRacePrompt: (show: boolean) => void;
+  setRacePosition: (pos: number) => void;
+  finishRace: (position: number) => void;
+  dismissRace: () => void;
   startGame: () => void;
   endGame: () => void;
   tick: (dt: number) => void;
@@ -148,6 +159,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   invincibleTimer: 0,
   isGiant: false,
   giantTimer: 0,
+  racePhase: 'none',
+  raceCountdown: 3,
+  racePosition: 1,
+  raceFinishTime: null,
+  racePointsEarned: 0,
 
   setPhase: (phase) => set({ phase }),
   setHappiness: (v) => set({ happiness: Math.max(0, Math.min(100, v)) }),
@@ -259,6 +275,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ jumpCount: newJumpCount, quests: newQuests });
   },
 
+  setRacePrompt: (show) => set({ racePhase: show ? 'prompt' : 'none' }),
+  setRacePosition: (pos) => set({ racePosition: pos }),
+
+  startRace: () => set({ racePhase: 'countdown', raceCountdown: 3, racePosition: 1, raceFinishTime: null, racePointsEarned: 0 }),
+
+  finishRace: (position) => {
+    const POINTS_TABLE = [500, 300, 150, 50];
+    const pts = POINTS_TABLE[Math.min(position - 1, 3)];
+    get().addScore(pts);
+    set({ racePhase: 'finished', racePosition: position, racePointsEarned: pts, raceFinishTime: Date.now() });
+  },
+
+  dismissRace: () => set({ racePhase: 'none' }),
+
   startGame: () => set({
     phase: 'playing',
     happiness: 80,
@@ -283,6 +313,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     invincibleTimer: 0,
     isGiant: false,
     giantTimer: 0,
+    racePhase: 'none',
+    raceCountdown: 3,
+    racePosition: 1,
+    raceFinishTime: null,
+    racePointsEarned: 0,
     totalPlays: get().totalPlays + 1,
   }),
 

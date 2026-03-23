@@ -8,6 +8,7 @@ import { ParticleEffects } from './ParticleEffects';
 import { GameLoop } from './GameLoop';
 import { Enemies } from './Enemies';
 import { Bullets } from './Bullets';
+import { RaceTrack } from './RaceTrack';
 import { useGameStore } from '../../store/gameStore';
 
 function NoWebGLFallback() {
@@ -25,8 +26,9 @@ function NoWebGLFallback() {
 }
 
 export function GameScene() {
-  const { phase } = useGameStore();
+  const { phase, racePhase } = useGameStore();
   const [webglError, setWebglError] = useState(false);
+  const racing = racePhase === 'countdown' || racePhase === 'racing';
 
   if (webglError) return <NoWebGLFallback />;
 
@@ -34,7 +36,7 @@ export function GameScene() {
     <div className="fixed inset-0" style={{ touchAction: 'none' }}>
       <Canvas
         shadows
-        camera={{ position: [0, 6, -12], fov: 65, near: 0.1, far: 250 }}
+        camera={{ position: [0, 6, -12], fov: 65, near: 0.1, far: 280 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         onCreated={({ gl }) => { if (!gl.getContext()) setWebglError(true); }}
         onError={() => setWebglError(true)}
@@ -45,11 +47,13 @@ export function GameScene() {
           <World />
           {phase === 'playing' && (
             <>
-              <Capybara />
+              {/* Hide the walking capybara during races — RaceTrack renders a kart instead */}
+              {!racing && <Capybara />}
               <Enemies />
               <Bullets />
               <FriendCapybaras />
               <ParticleEffects />
+              <RaceTrack />
             </>
           )}
         </Suspense>

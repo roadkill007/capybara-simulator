@@ -160,9 +160,11 @@ export function HUD() {
         <div className="text-white/60 text-xs flex gap-3 flex-wrap justify-center">
           <span>⬆️⬇️⬅️➡️ Move</span>
           <span>Shift Run</span>
-          <span>Space/F 💥 Shoot</span>
+          <span>Space Jump</span>
+          <span>F 💥 Shoot</span>
           <span>E 🍉 Eat</span>
           <span>Z 😴 Sleep</span>
+          <span className="text-yellow-400">🏁 Race Zone: NE corner!</span>
         </div>
       </div>
 

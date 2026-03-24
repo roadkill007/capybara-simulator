@@ -179,7 +179,7 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
 export function Enemies() {
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const spawnTimer = useRef(SPAWN_INTERVAL);
-  const { phase, damagePlayer, killEnemy } = useGameStore();
+  const { phase, damagePlayer, killEnemy, soccerPhase, shootingPhase, racePhase } = useGameStore();
 
   // Keep enemyList in sync
   useEffect(() => {
@@ -218,6 +218,13 @@ export function Enemies() {
       setEnemies(prev => [...prev, newEnemy]);
     }
 
+    // Enemies freeze to roam-only while any mini-game is active
+    const inMiniGame =
+      soccerPhase === 'playing' ||
+      shootingPhase === 'playing' ||
+      racePhase === 'countdown' ||
+      racePhase === 'racing';
+
     setEnemies(prev => prev.map(enemy => {
       // Tick down death animation then mark for removal
       if (enemy.state === 'dead') {
@@ -233,13 +240,15 @@ export function Enemies() {
       toPlayer.y = 0;
       const distToPlayer = toPlayer.length();
 
-      // State transitions
-      if (distToPlayer < ENEMY_ATTACK_DIST) {
+      // State transitions — skip chase/attack during mini-games
+      if (!inMiniGame && distToPlayer < ENEMY_ATTACK_DIST) {
         updated.state = 'attack';
-      } else if (distToPlayer < ENEMY_CHASE_DIST) {
+      } else if (!inMiniGame && distToPlayer < ENEMY_CHASE_DIST) {
         updated.state = 'chase';
       } else {
-        updated.state = 'roam';
+        if (updated.state === 'chase' || updated.state === 'attack') {
+          updated.state = 'roam';
+        }
       }
 
       // Movement

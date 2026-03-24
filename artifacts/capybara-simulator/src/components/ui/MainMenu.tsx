@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { useGameStore } from '../../store/gameStore';
 
 const FEATURES = [
@@ -237,8 +238,8 @@ export function MainMenu() {
                 alignItems: 'center',
               }}>
                 {CONTROLS.map(([key, action]) => (
-                  <>
-                    <kbd key={`k-${key}`} style={{
+                  <Fragment key={key}>
+                    <kbd style={{
                       background: 'rgba(255,255,255,0.1)',
                       border: '1px solid rgba(255,255,255,0.15)',
                       borderRadius: 6,
@@ -249,8 +250,8 @@ export function MainMenu() {
                       whiteSpace: 'nowrap',
                       justifySelf: 'start',
                     }}>{key}</kbd>
-                    <span key={`a-${key}`} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem' }}>{action}</span>
-                  </>
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem' }}>{action}</span>
+                  </Fragment>
                 ))}
               </div>
             </div>

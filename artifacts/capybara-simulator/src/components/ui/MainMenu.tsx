@@ -6,6 +6,8 @@ const FEATURES = [
   { icon: '🍉', label: 'Eat', sub: 'Heal & grow' },
   { icon: '💥', label: 'Shoot', sub: 'Blast enemies' },
   { icon: '🏎️', label: 'Race', sub: 'Beat rivals' },
+  { icon: '⚽', label: 'Soccer', sub: '5v5 team match' },
+  { icon: '🎯', label: 'Shooting Range', sub: 'Hit targets, 45s' },
   { icon: '🌿', label: 'Explore', sub: 'Open world' },
   { icon: '⚡', label: 'Giant', sub: 'Power up' },
 ];

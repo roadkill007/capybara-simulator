@@ -36,6 +36,25 @@ artifacts-monorepo/
 └── package.json
 ```
 
+## Capybara Simulator 3D — Mini-games & World
+
+### Mini-games
+- **Car Race** (NE corner): Countdown → racing phase, 4 AI opponents, finish-line detection
+- **Soccer** (W side, -42, 0, 2): 5v5 capybara soccer, 90s match, ball physics, AI teammates + opponents, goals with nets + floodlights; trigger zone at (-42, 0, -8) green rings
+- **Shooting Range** (S side, 2, 0, 50): 45s timed, 5-lane range, pop-up targets animated via mesh refs, ray-cast hit detection on F key; trigger zone at (2, 0, 38) red rings
+- **ProximityZones**: `useFrame` distance checks → store prompt state; E key → start mini-game
+
+### World spreading
+- Seeded deterministic RNG (`createRng(seed)`) + `spreadPlace()` with minimum-distance rejection
+- Exclusion zones: 3 ponds, spawn area, race track oval, soccer field, shooting range
+- All vegetation/boulder useMemos use seeded seeds (1001-1010)
+
+### Files
+- `SoccerGame.tsx` — soccer field, ball, AI capybaras, goals, spectator stands
+- `ShootingRange.tsx` — range walls, 5 animated target lanes (mesh refs), entrance sign
+- `ProximityZones.tsx` — proximity + E-key entry for both mini-games
+- `gameStore.ts` — soccerPhase/Score/TimeLeft + shootingPhase/Score/TimeLeft state
+
 ## Capybara Simulator 3D
 
 A fully 3D browser game built with React Three Fiber (@react-three/fiber), Three.js, and Zustand.

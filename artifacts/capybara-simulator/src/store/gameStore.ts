@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export type GamePhase = 'menu' | 'playing' | 'dead';
 export type RacePhase = 'none' | 'prompt' | 'countdown' | 'racing' | 'finished';
+export type MiniGamePhase = 'none' | 'prompt' | 'playing' | 'finished';
 export type CapybaraAction = 'idle' | 'walking' | 'running' | 'swimming' | 'eating' | 'sleeping' | 'happy' | 'shooting' | 'jumping';
 
 export interface Friend {
@@ -60,12 +61,26 @@ interface GameState {
   invincibleTimer: number;
   isGiant: boolean;
   giantTimer: number;
+
+  // Race mini-game
   racePhase: RacePhase;
   raceCountdown: number;
   racePosition: number;
   raceFinishTime: number | null;
   racePointsEarned: number;
 
+  // Soccer mini-game
+  soccerPhase: MiniGamePhase;
+  soccerPlayerScore: number;
+  soccerAiScore: number;
+  soccerTimeLeft: number;
+
+  // Shooting Range mini-game
+  shootingPhase: MiniGamePhase;
+  shootingScore: number;
+  shootingTimeLeft: number;
+
+  // Actions
   setPhase: (phase: GamePhase) => void;
   setHappiness: (v: number) => void;
   setHunger: (v: number) => void;
@@ -84,12 +99,31 @@ interface GameState {
   resetCombo: () => void;
   killEnemy: () => void;
   addJump: () => void;
+
+  // Race actions
   startRace: () => void;
   beginRacing: () => void;
   setRacePrompt: (show: boolean) => void;
   setRacePosition: (pos: number) => void;
   finishRace: (position: number) => void;
   dismissRace: () => void;
+
+  // Soccer actions
+  setSoccerPrompt: (show: boolean) => void;
+  startSoccer: () => void;
+  scoreSoccerGoal: (team: 'player' | 'ai') => void;
+  tickSoccer: (dt: number) => void;
+  endSoccer: () => void;
+  dismissSoccer: () => void;
+
+  // Shooting Range actions
+  setShootingPrompt: (show: boolean) => void;
+  startShooting: () => void;
+  addShootingHit: () => void;
+  tickShooting: (dt: number) => void;
+  endShooting: () => void;
+  dismissShooting: () => void;
+
   startGame: () => void;
   endGame: () => void;
   tick: (dt: number) => void;
@@ -165,6 +199,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   racePosition: 1,
   raceFinishTime: null,
   racePointsEarned: 0,
+  soccerPhase: 'none',
+  soccerPlayerScore: 0,
+  soccerAiScore: 0,
+  soccerTimeLeft: 90,
+  shootingPhase: 'none',
+  shootingScore: 0,
+  shootingTimeLeft: 45,
 
   setPhase: (phase) => set({ phase }),
   setHappiness: (v) => set({ happiness: Math.max(0, Math.min(100, v)) }),
@@ -278,19 +319,71 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setRacePrompt: (show) => set({ racePhase: show ? 'prompt' : 'none' }),
   setRacePosition: (pos) => set({ racePosition: pos }),
-
-  // startRace: prompt → countdown. beginRacing: countdown → racing.
   startRace: () => set({ racePhase: 'countdown', raceCountdown: 3, racePosition: 1, raceFinishTime: null, racePointsEarned: 0 }),
   beginRacing: () => set({ racePhase: 'racing' }),
-
   finishRace: (position) => {
     const POINTS_TABLE = [500, 300, 150, 50];
     const pts = POINTS_TABLE[Math.min(position - 1, 3)];
     get().addScore(pts);
     set({ racePhase: 'finished', racePosition: position, racePointsEarned: pts, raceFinishTime: Date.now() });
   },
-
   dismissRace: () => set({ racePhase: 'none' }),
+
+  // ── Soccer ────────────────────────────────────────────────────────────────
+  setSoccerPrompt: (show) => set({ soccerPhase: show ? 'prompt' : 'none' }),
+  startSoccer: () => set({ soccerPhase: 'playing', soccerPlayerScore: 0, soccerAiScore: 0, soccerTimeLeft: 90 }),
+  scoreSoccerGoal: (team) => {
+    const s = get();
+    if (team === 'player') {
+      set({ soccerPlayerScore: s.soccerPlayerScore + 1 });
+      get().addScore(200);
+    } else {
+      set({ soccerAiScore: s.soccerAiScore + 1 });
+    }
+  },
+  tickSoccer: (dt) => {
+    const { soccerPhase, soccerTimeLeft } = get();
+    if (soccerPhase !== 'playing') return;
+    const next = soccerTimeLeft - dt;
+    if (next <= 0) {
+      get().endSoccer();
+    } else {
+      set({ soccerTimeLeft: next });
+    }
+  },
+  endSoccer: () => {
+    const { soccerPlayerScore, soccerAiScore } = get();
+    const pts = soccerPlayerScore > soccerAiScore ? 400 : soccerPlayerScore === soccerAiScore ? 150 : 50;
+    get().addScore(pts);
+    set({ soccerPhase: 'finished' });
+  },
+  dismissSoccer: () => set({ soccerPhase: 'none' }),
+
+  // ── Shooting Range ────────────────────────────────────────────────────────
+  setShootingPrompt: (show) => set({ shootingPhase: show ? 'prompt' : 'none' }),
+  startShooting: () => set({ shootingPhase: 'playing', shootingScore: 0, shootingTimeLeft: 45 }),
+  addShootingHit: () => {
+    const { shootingScore } = get();
+    const newScore = shootingScore + 1;
+    set({ shootingScore: newScore });
+    get().addScore(100);
+  },
+  tickShooting: (dt) => {
+    const { shootingPhase, shootingTimeLeft } = get();
+    if (shootingPhase !== 'playing') return;
+    const next = shootingTimeLeft - dt;
+    if (next <= 0) {
+      get().endShooting();
+    } else {
+      set({ shootingTimeLeft: next });
+    }
+  },
+  endShooting: () => {
+    const { shootingScore } = get();
+    get().addScore(shootingScore * 50);
+    set({ shootingPhase: 'finished' });
+  },
+  dismissShooting: () => set({ shootingPhase: 'none' }),
 
   startGame: () => set({
     phase: 'playing',
@@ -321,6 +414,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     racePosition: 1,
     raceFinishTime: null,
     racePointsEarned: 0,
+    soccerPhase: 'none',
+    soccerPlayerScore: 0,
+    soccerAiScore: 0,
+    soccerTimeLeft: 90,
+    shootingPhase: 'none',
+    shootingScore: 0,
+    shootingTimeLeft: 45,
     totalPlays: get().totalPlays + 1,
   }),
 

@@ -380,6 +380,46 @@ function PotionDisplay({ potion }: { potion: { id: string; position: [number, nu
   );
 }
 
+// ─── Deterministic world placement ────────────────────────────────────────────
+function createRng(seed: number) {
+  let s = seed >>> 0;
+  return (): number => {
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+const WORLD_EXCLUDES = [
+  { cx: 12,  cz: -10, r: 13 },
+  { cx: -20, cz: 15,  r: 10 },
+  { cx: 30,  cz: 25,  r: 9  },
+  { cx: 0,   cz: 0,   r: 9  },
+  { cx: 10,  cz: -38, r: 36 },
+  { cx: -42, cz: 2,   r: 22 },
+  { cx: 2,   cz: 50,  r: 18 },
+];
+
+function spreadPlace(
+  rng: () => number,
+  count: number,
+  minDist: number,
+  xMin: number, xMax: number,
+  zMin: number, zMax: number,
+  extra: { cx: number; cz: number; r: number }[] = []
+): [number, number, number][] {
+  const placed: [number, number, number][] = [];
+  const ex = [...WORLD_EXCLUDES, ...extra];
+  let tries = 0;
+  while (placed.length < count && tries++ < count * 60) {
+    const x = xMin + rng() * (xMax - xMin);
+    const z = zMin + rng() * (zMax - zMin);
+    if (ex.some(e => (x - e.cx) ** 2 + (z - e.cz) ** 2 < e.r ** 2)) continue;
+    if (placed.some(([px, , pz]) => (x - px) ** 2 + (z - pz) ** 2 < minDist ** 2)) continue;
+    placed.push([x, 0, z]);
+  }
+  return placed;
+}
+
 // ─── Main World component ─────────────────────────────────────────────────────
 export function World() {
   const { timeOfDay, foodItems, potionItems } = useGameStore();
@@ -405,76 +445,68 @@ export function World() {
   // Ground material changes with time
   const groundColor = isDark ? '#1B3A1B' : '#4A7A30';
 
-  // Static position arrays (computed once)
+  // Static position arrays — deterministic seeded placement (no random clustering)
   const trees = useMemo(() => {
-    const positions: [number, number, number][] = [];
-    for (let i = 0; i < 80; i++) {
-      const angle = (i / 80) * Math.PI * 2 * 3.7;
-      const r = 15 + Math.sin(i * 2.1) * 25 + Math.random() * 10;
-      const x = Math.cos(angle) * r;
-      const z = Math.sin(angle) * r;
-      if (Math.sqrt((x - 12) ** 2 + (z + 10) ** 2) > 12 && Math.sqrt((x + 20) ** 2 + (z - 15) ** 2) > 10)
-        positions.push([x, 0, z]);
-    }
-    return positions;
+    const rng = createRng(1001);
+    return spreadPlace(rng, 70, 7, -65, 65, -65, 65);
   }, []);
 
   const palms = useMemo(() => {
+    // Palms ring each pond
     const p: [number, number, number][] = [];
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const r = 4 + Math.sin(i * 3) * 3;
-      p.push([12 + Math.cos(a) * r, 0, -10 + Math.sin(a) * r]);
-    }
+    [[12, -10, 9], [-20, 15, 7], [30, 25, 6]].forEach(([cx, cz, r]) => {
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        p.push([cx + Math.cos(a) * (r + 2), 0, cz + Math.sin(a) * (r + 2)]);
+      }
+    });
     return p;
   }, []);
 
   const bushes = useMemo(() => {
-    const b: [number, number, number][] = [];
-    for (let i = 0; i < 40; i++) b.push([(Math.random() - 0.5) * 100, 0, (Math.random() - 0.5) * 100]);
-    return b;
+    const rng = createRng(1003);
+    return spreadPlace(rng, 45, 4, -60, 60, -60, 60);
   }, []);
 
   const rocks = useMemo(() => {
-    const r: [number, number, number][] = [];
-    for (let i = 0; i < 30; i++) r.push([(Math.random() - 0.5) * 100, 0.1, (Math.random() - 0.5) * 100]);
-    return r;
+    const rng = createRng(1004);
+    return spreadPlace(rng, 30, 3.5, -60, 60, -60, 60).map(([x, , z]) => [x, 0.1, z] as [number, number, number]);
   }, []);
 
   const flowers = useMemo(() => {
-    const f: [number, number, number][] = [];
-    for (let i = 0; i < 100; i++) f.push([(Math.random() - 0.5) * 110, 0.05, (Math.random() - 0.5) * 110]);
-    return f;
+    const rng = createRng(1005);
+    return spreadPlace(rng, 90, 2, -62, 62, -62, 62);
   }, []);
 
   const grassPatches = useMemo(() => {
-    const g: [number, number, number][] = [];
-    for (let i = 0; i < 50; i++) g.push([(Math.random() - 0.5) * 100, 0, (Math.random() - 0.5) * 100]);
-    return g;
+    const rng = createRng(1006);
+    return spreadPlace(rng, 50, 3, -60, 60, -60, 60);
   }, []);
 
   const cacti = useMemo(() => {
-    const c: [number, number, number][] = [];
-    for (let i = 0; i < 22; i++) c.push([20 + Math.random() * 36, 0, 20 + Math.random() * 36]);
-    return c;
+    const rng = createRng(1007);
+    return spreadPlace(rng, 22, 5, 20, 58, 20, 58);
   }, []);
 
   const acacias = useMemo(() => {
-    const a: [number, number, number][] = [];
-    for (let i = 0; i < 18; i++) a.push([-20 - Math.random() * 34, 0, 20 + Math.random() * 34]);
-    return a;
+    const rng = createRng(1008);
+    return spreadPlace(rng, 18, 6, -58, -20, 20, 58);
   }, []);
 
   const jungleTrees = useMemo(() => {
-    const j: { pos: [number, number, number]; h: number }[] = [];
-    for (let i = 0; i < 26; i++) j.push({ pos: [-20 - Math.random() * 34, 0, -20 - Math.random() * 34], h: Math.random() });
-    return j;
+    const rng = createRng(1009);
+    const rng2 = createRng(1009 + 99);
+    return spreadPlace(rng, 26, 5, -58, -20, -58, -20).map(pos => ({ pos, h: rng2() }));
   }, []);
 
   const mountainBoulders = useMemo(() => {
-    const m: { pos: [number, number, number]; s: number }[] = [];
-    for (let i = 0; i < 30; i++) m.push({ pos: [20 + Math.random() * 34, Math.random() * 1.5, -20 - Math.random() * 34], s: 0.6 + Math.random() * 1.4 });
-    return m;
+    const rng = createRng(1010);
+    const rng2 = createRng(1010 + 77);
+    const rng3 = createRng(1010 + 55);
+    return spreadPlace(rng, 30, 4, 20, 58, -58, -20).map(([x, , z]) => ({
+      pos: [x, rng2() * 1.2, z] as [number, number, number],
+      s: 0.6 + rng3() * 1.4,
+    }));
   }, []);
 
   return (
@@ -623,6 +655,52 @@ export function World() {
           </mesh>
         );
       })}
+
+      {/* ── Mini-game trigger zone markers ── */}
+      {/* Soccer zone — green pulsing rings + sign */}
+      <group position={[-42, 0, -8]}>
+        {/* Ground ring */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+          <ringGeometry args={[9.5, 10.5, 40]} />
+          <meshStandardMaterial color="#22CC44" roughness={0.8} metalness={0} emissive="#118822" emissiveIntensity={0.6} transparent opacity={0.7} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+          <ringGeometry args={[5.5, 6.5, 32]} />
+          <meshStandardMaterial color="#44FF66" roughness={0.8} metalness={0} emissive="#22AA44" emissiveIntensity={0.5} transparent opacity={0.5} />
+        </mesh>
+        {/* Sign post */}
+        <mesh position={[0, 2, 0]} castShadow>
+          <cylinderGeometry args={[0.1, 0.12, 4, 7]} />
+          <meshStandardMaterial color="#8B7355" roughness={0.9} metalness={0.02} />
+        </mesh>
+        <mesh position={[0, 4.5, 0]} castShadow>
+          <boxGeometry args={[3.5, 1.2, 0.25]} />
+          <meshStandardMaterial color="#1B5E20" roughness={0.7} metalness={0.1} emissive="#0A3010" emissiveIntensity={0.2} />
+        </mesh>
+        <pointLight position={[0, 3, 0]} intensity={0.5} distance={12} color="#33FF66" />
+      </group>
+
+      {/* Shooting range zone — red pulsing rings + sign */}
+      <group position={[2, 0, 38]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+          <ringGeometry args={[9.5, 10.5, 40]} />
+          <meshStandardMaterial color="#CC2244" roughness={0.8} metalness={0} emissive="#881122" emissiveIntensity={0.6} transparent opacity={0.7} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+          <ringGeometry args={[5.5, 6.5, 32]} />
+          <meshStandardMaterial color="#FF4466" roughness={0.8} metalness={0} emissive="#AA2233" emissiveIntensity={0.5} transparent opacity={0.5} />
+        </mesh>
+        {/* Sign post */}
+        <mesh position={[0, 2, 0]} castShadow>
+          <cylinderGeometry args={[0.1, 0.12, 4, 7]} />
+          <meshStandardMaterial color="#8B7355" roughness={0.9} metalness={0.02} />
+        </mesh>
+        <mesh position={[0, 4.5, 0]} castShadow>
+          <boxGeometry args={[3.5, 1.2, 0.25]} />
+          <meshStandardMaterial color="#B71C1C" roughness={0.7} metalness={0.1} emissive="#5A0E0E" emissiveIntensity={0.2} />
+        </mesh>
+        <pointLight position={[0, 3, 0]} intensity={0.5} distance={12} color="#FF3355" />
+      </group>
 
       {/* ── Food & Potions ── */}
       {foodItems.map(food => <FoodDisplay key={food.id} food={food} />)}

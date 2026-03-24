@@ -1,7 +1,6 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useGLTF, useAnimations } from '@react-three/drei';
 import { useGameStore } from '../../store/gameStore';
 import { playerState } from './playerState';
 import { fireBullet } from './Bullets';
@@ -17,7 +16,6 @@ const GRAVITY = 20;
 const keys: Record<string, boolean> = {};
 const jumpPressed = { current: false };
 
-// Pond definitions (must match World.tsx pond positions)
 const PONDS: [number, number, number][] = [
   [12, -10, 9],
   [-20, 15, 7],
@@ -31,163 +29,152 @@ function isInPond(x: number, z: number): boolean {
   return false;
 }
 
-// Preload GLB model
-useGLTF.preload('/models/capybara_quadruped_walk.glb');
-
 function CapybaraBody({ action, isInWater, invincible, isGiant }: {
   action: string; isInWater: boolean; invincible: boolean; isGiant: boolean;
 }) {
-  const groupRef = useRef<THREE.Group>(null!);
+  const bodyRef = useRef<THREE.Group>(null!);
+  const tailRef = useRef<THREE.Mesh>(null!);
+  const legRefs = [useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!)];
+  const earRef = useRef<THREE.Mesh>(null!);
+  const mouthRef = useRef<THREE.Mesh>(null!);
   const glowRef = useRef<THREE.Mesh>(null!);
   const t = useRef(0);
-  const prevAction = useRef('idle');
 
-  // Walk GLB carries both the rigged mesh + walk animation clips
-  const { scene: walkScene, animations } = useGLTF('/models/capybara_quadruped_walk.glb');
-
-  // Clone scene once — gives us independent materials we can tint safely
-  const walkClone = useMemo(() => {
-    const clone = walkScene.clone(true);
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-        mesh.material = Array.isArray(mesh.material)
-          ? mesh.material.map((m: THREE.Material) => m.clone())
-          : (mesh.material as THREE.Material).clone();
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-      }
-    });
-    return clone;
-  }, [walkScene]);
-
-  // Clip copies so mixer binds to walkClone's bones by name
-  const clonedAnims = useMemo(() => animations.map((c) => c.clone()), [animations]);
-
-  const { actions } = useAnimations(clonedAnims, groupRef);
-
-  // Apply color tints based on game state
-  const applyTint = (scene: THREE.Object3D, color: string | null) => {
-    scene.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mat = (child as THREE.Mesh).material;
-        const mats = Array.isArray(mat) ? mat : [mat];
-        mats.forEach((m: THREE.Material) => {
-          if ((m as THREE.MeshStandardMaterial).color) {
-            (m as THREE.MeshStandardMaterial).color.set(color ?? '#8B7355');
-          }
-        });
-      }
-    });
-  };
-
-  // Sync animation based on action
-  useEffect(() => {
-    if (Object.keys(actions).length === 0) return;
-    const walkKey = Object.keys(actions)[0];
-    const anim = actions[walkKey];
-    if (!anim) return;
-
-    const isWalking = action === 'walking' || action === 'running';
-    const wasWalking = prevAction.current === 'walking' || prevAction.current === 'running';
-
-    if (isWalking) {
-      if (!wasWalking) anim.reset();
-      anim.play();
-      anim.timeScale = action === 'running' ? 2.0 : 1.0;
-    } else {
-      // Show idle pose — advance walk animation very slowly for gentle sway
-      anim.play();
-      anim.timeScale = 0.08;
-    }
-    prevAction.current = action;
-  }, [action, actions]);
-
-  // Suppress root motion + animate game-state offsets
   useFrame((_, dt) => {
     t.current += dt;
-    if (!groupRef.current) return;
+    const time = t.current;
+    if (!bodyRef.current) return;
 
-    // Kill any root motion baked into the walk animation clip
-    walkClone.position.set(0, 0, 0);
+    if (action === 'walking' || action === 'running') {
+      const sp = action === 'running' ? 8 : 4;
+      bodyRef.current.position.y = Math.sin(time * sp) * 0.05;
+      legRefs.forEach((leg, i) => {
+        if (leg.current) leg.current.rotation.x = Math.sin(time * sp + i * Math.PI) * 0.45;
+      });
+    } else if (action === 'jumping') {
+      bodyRef.current.position.y = Math.abs(Math.sin(time * 6)) * 0.08;
+    } else if (action === 'swimming') {
+      bodyRef.current.position.y = Math.sin(time * 2) * 0.05 - 0.2;
+      bodyRef.current.rotation.x = Math.sin(time * 2) * 0.05;
+    } else if (action === 'eating') {
+      if (mouthRef.current) mouthRef.current.scale.y = 1 + Math.sin(time * 8) * 0.3;
+    } else if (action === 'sleeping') {
+      bodyRef.current.position.y = -0.1;
+      bodyRef.current.rotation.x = 0.3;
+    } else if (action === 'happy') {
+      bodyRef.current.position.y = Math.abs(Math.sin(time * 5)) * 0.15;
+      if (tailRef.current) tailRef.current.rotation.z = Math.sin(time * 10) * 0.5;
+    } else {
+      bodyRef.current.position.y = Math.sin(time * 1.5) * 0.02;
+      if (earRef.current) earRef.current.rotation.z = Math.sin(time * 2) * 0.1;
+    }
 
-    // Glow pulse for giant mode
     if (glowRef.current) {
       const mat = glowRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = isGiant ? 0.22 + Math.sin(t.current * 3) * 0.08 : 0;
-    }
-
-    // Tint only on change (not every frame) to avoid traversal cost
-    const flash = invincible && Math.floor(Date.now() / 120) % 2 === 0;
-    const tintColor = isGiant
-      ? (flash ? '#FFD700' : '#FF8C00')
-      : (flash ? '#FF9999' : null);
-
-    if (tintColor) {
-      applyTint(walkClone, tintColor);
-    }
-
-    // Swimming offset — bob the entire group
-    if (action === 'swimming') {
-      groupRef.current.position.y = Math.sin(t.current * 2) * 0.06;
-      groupRef.current.rotation.x = Math.sin(t.current * 2) * 0.04;
-    } else if (action === 'sleeping') {
-      groupRef.current.position.y = -0.08;
-      groupRef.current.rotation.x = 0.25;
-    } else if (action === 'happy') {
-      groupRef.current.position.y = Math.abs(Math.sin(t.current * 5)) * 0.12;
-      groupRef.current.rotation.x = 0;
-    } else {
-      groupRef.current.position.y = 0;
-      groupRef.current.rotation.x = 0;
+      mat.opacity = isGiant ? 0.25 + Math.sin(time * 3) * 0.1 : 0;
     }
   });
 
-  // Giant crown material
-  const crownMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#FFD700', roughness: 0.2, metalness: 0.9, emissive: '#AA6600', emissiveIntensity: 0.25 }),
-    []
-  );
-
-  // Model scale: GLB is in Blender units (meters). Capybara real ~1.2m long,
-  // game body ~1.2 units. Scale to fit nicely.
-  const MODEL_SCALE = 0.5;
+  const flash = invincible && Math.floor(Date.now() / 120) % 2 === 0;
+  const bodyColor = isGiant ? (flash ? '#FFD700' : '#FF8C00') : (flash ? '#FF9999' : '#8B6914');
+  const darkColor = isGiant ? '#CC6600' : (flash ? '#CC4444' : '#6B4F0F');
+  const noseColor = '#5C3A1E';
+  const eyeColor  = isGiant ? '#FF4400' : '#111111';
+  const bodyRough = isInWater ? 0.45 : 0.82;
+  const crownMat = new THREE.MeshStandardMaterial({ color: '#FFD700', roughness: 0.25, metalness: 0.85, emissive: '#AA7700', emissiveIntensity: 0.2 });
 
   return (
-    <group ref={groupRef}>
-      {/* Giant glow aura */}
-      <mesh ref={glowRef} position={[0, 0.5, 0]}>
-        <sphereGeometry args={[1.8, 16, 16]} />
+    <group ref={bodyRef}>
+      {/* Glow aura */}
+      <mesh ref={glowRef}>
+        <sphereGeometry args={[1.6, 12, 12]} />
         <meshBasicMaterial color={isGiant ? '#FF8C00' : '#ffffff'} transparent opacity={0} side={THREE.BackSide} />
       </mesh>
 
-      {/* GLB walk scene (carries walk animation + rig) */}
-      <primitive
-        object={walkClone}
-        scale={MODEL_SCALE}
-        rotation={[0, Math.PI, 0]}
-      />
+      {/* Body */}
+      <mesh castShadow>
+        <capsuleGeometry args={[0.38, 0.75, 6, 12]} />
+        <meshStandardMaterial color={bodyColor} roughness={bodyRough} metalness={0.02} />
+      </mesh>
 
-      {/* Subtle water disturbance ring when swimming */}
-      {isInWater && (
-        <mesh position={[0, -0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.42, 0.52, 24]} />
-          <meshStandardMaterial color="#A8D8F0" transparent opacity={0.18} roughness={0.05} metalness={0.1} />
+      {/* Head */}
+      <group position={[0, 0.28, 0.62]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.54, 0.42, 0.52]} />
+          <meshStandardMaterial color={bodyColor} roughness={bodyRough} metalness={0.02} />
         </mesh>
-      )}
-
-      {/* Giant crown */}
-      {isGiant && (
-        <group position={[0, 1.35, 0]}>
-          {[-0.14, 0, 0.14].map((x, i) => (
-            <mesh key={i} position={[x, i === 1 ? 0.12 : 0.07, 0]} material={crownMat}>
-              <coneGeometry args={[0.055, 0.16, 6]} />
-            </mesh>
-          ))}
-          <mesh position={[0, 0, 0]} material={crownMat}>
-            <boxGeometry args={[0.42, 0.075, 0.14]} />
+        {/* Snout */}
+        <mesh position={[0, -0.05, 0.24]} castShadow>
+          <boxGeometry args={[0.38, 0.24, 0.12]} />
+          <meshStandardMaterial color={darkColor} roughness={0.85} metalness={0.02} />
+        </mesh>
+        {/* Nostrils */}
+        {([-0.09, 0.09] as number[]).map((x, i) => (
+          <mesh key={i} position={[x, -0.04, 0.3]}>
+            <sphereGeometry args={[0.04, 6, 6]} />
+            <meshStandardMaterial color={noseColor} roughness={0.7} metalness={0.05} />
           </mesh>
-        </group>
+        ))}
+        {/* Eyes */}
+        {([-0.17, 0.17] as number[]).map((x, i) => (
+          <group key={i}>
+            <mesh position={[x, 0.12, 0.24]}>
+              <sphereGeometry args={[0.058, 7, 7]} />
+              <meshStandardMaterial color={eyeColor} roughness={0.05} metalness={0.15} />
+            </mesh>
+            <mesh position={[x + (x > 0 ? 0.02 : -0.02), 0.135, 0.275]}>
+              <sphereGeometry args={[0.018, 5, 5]} />
+              <meshStandardMaterial color="white" emissive="white" emissiveIntensity={0.5} />
+            </mesh>
+          </group>
+        ))}
+        {/* Ears */}
+        <mesh ref={earRef} position={[-0.22, 0.26, -0.06]} rotation={[0, 0, -0.3]} castShadow>
+          <capsuleGeometry args={[0.075, 0.1, 4, 7]} />
+          <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
+        </mesh>
+        <mesh position={[0.22, 0.26, -0.06]} rotation={[0, 0, 0.3]} castShadow>
+          <capsuleGeometry args={[0.075, 0.1, 4, 7]} />
+          <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
+        </mesh>
+        {/* Mouth */}
+        <mesh ref={mouthRef} position={[0, -0.13, 0.27]}>
+          <boxGeometry args={[0.16, 0.03, 0.05]} />
+          <meshStandardMaterial color={noseColor} roughness={0.7} metalness={0.02} />
+        </mesh>
+        {/* Crown */}
+        {isGiant && (
+          <group position={[0, 0.24, 0]}>
+            {([-0.13, 0, 0.13] as number[]).map((x, i) => (
+              <mesh key={i} position={[x, i === 1 ? 0.11 : 0.07, 0]} material={crownMat}>
+                <coneGeometry args={[0.055, 0.15, 6]} />
+              </mesh>
+            ))}
+            <mesh material={crownMat}><boxGeometry args={[0.4, 0.075, 0.13]} /></mesh>
+          </group>
+        )}
+      </group>
+
+      {/* Legs */}
+      {([[-0.3, -0.38, 0.26], [0.3, -0.38, 0.26], [-0.3, -0.38, -0.26], [0.3, -0.38, -0.26]] as [number,number,number][]).map(([x, y, z], i) => (
+        <mesh key={i} ref={legRefs[i]} position={[x, y, z]} castShadow>
+          <capsuleGeometry args={[0.095, 0.24, 4, 7]} />
+          <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
+        </mesh>
+      ))}
+
+      {/* Tail */}
+      <mesh ref={tailRef} position={[0, 0.12, -0.62]} rotation={[0.3, 0, 0]} castShadow>
+        <capsuleGeometry args={[0.055, 0.11, 4, 7]} />
+        <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
+      </mesh>
+
+      {/* Water ripple */}
+      {isInWater && (
+        <mesh position={[0, -0.22, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.44, 0.54, 20]} />
+          <meshStandardMaterial color="#A8D8F0" transparent opacity={0.18} roughness={0.05} />
+        </mesh>
       )}
     </group>
   );
@@ -202,13 +189,11 @@ export function Capybara() {
   const { camera } = useThree();
   const shootCooldown = useRef(0);
   const actionCooldown = useRef(0);
-  const jumpWasPressed = useRef(false);
   const camZoom = useRef(1.0);
 
   const {
     phase, setIsInWater, setCurrentAction, energy, collectFood, foodItems,
-    addScore, setHappiness, happiness, isInWater, invincibleTimer,
-    isGiant, potionItems, collectPotion, addJump,
+    isInWater, invincibleTimer, isGiant, potionItems, collectPotion, addJump,
   } = useGameStore();
   const [localAction, setLocalAction] = useState<string>('idle');
 
@@ -219,32 +204,20 @@ export function Capybara() {
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('keyup', onKey);
-    };
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKey); };
   }, []);
 
-  // Scroll-to-zoom + pinch-to-zoom
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       camZoom.current = THREE.MathUtils.clamp(camZoom.current + e.deltaY * 0.002, 0.3, 2.5);
     };
     let prevPinchDist = 0;
     const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        prevPinchDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-      }
+      if (e.touches.length === 2) prevPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
     };
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2) {
-        const d = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         camZoom.current = THREE.MathUtils.clamp(camZoom.current - (d - prevPinchDist) * 0.005, 0.3, 2.5);
         prevPinchDist = d;
       }
@@ -261,7 +234,6 @@ export function Capybara() {
 
   useFrame((_, dt) => {
     if (phase !== 'playing' || !meshRef.current) return;
-
     actionCooldown.current = Math.max(0, actionCooldown.current - dt);
     shootCooldown.current = Math.max(0, shootCooldown.current - dt);
 
@@ -271,104 +243,69 @@ export function Capybara() {
 
     const joyX = mobileInput.joystickX;
     const joyY = mobileInput.joystickY;
-
     if (keys['KeyA'] || keys['ArrowLeft']) rotationRef.current += ROTATION_SPEED * dt;
     if (keys['KeyD'] || keys['ArrowRight']) rotationRef.current -= ROTATION_SPEED * dt;
     if (Math.abs(joyX) > 0.1) rotationRef.current -= joyX * ROTATION_SPEED * dt;
 
-    const fwd = new THREE.Vector3(
-      Math.sin(rotationRef.current),
-      0,
-      Math.cos(rotationRef.current)
-    );
-
+    const fwd = new THREE.Vector3(Math.sin(rotationRef.current), 0, Math.cos(rotationRef.current));
     const isRunning = (keys['ShiftLeft'] || keys['ShiftRight'] || mobileInput.run) && energy > 10;
     const inWater = isInPond(pos.x, pos.z);
     const speed = (inWater ? SWIM_SPEED : isRunning ? RUN_SPEED : SPEED) * giantSpeed;
 
     const fwdKbd = (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0);
-    const fwdMobile = joyY;
-    const fwdTotal = fwdKbd !== 0 ? fwdKbd : fwdMobile;
-
+    const fwdTotal = fwdKbd !== 0 ? fwdKbd : joyY;
     if (fwdTotal > 0.1) pos.addScaledVector(fwd, speed * fwdTotal * dt);
     if (fwdTotal < -0.1) pos.addScaledVector(fwd, speed * fwdTotal * 0.6 * dt);
-
     pos.x = Math.max(-58, Math.min(58, pos.x));
     pos.z = Math.max(-58, Math.min(58, pos.z));
 
     const groundY = getGroundHeight(pos.x, pos.z);
     const wantJump = (jumpPressed.current || mobileInput.jump) && isOnGround.current && !inWater;
-    if (wantJump) {
-      velocityY.current = JUMP_FORCE;
-      isOnGround.current = false;
-      addJump();
-    }
+    if (wantJump) { velocityY.current = JUMP_FORCE; isOnGround.current = false; addJump(); }
     jumpPressed.current = false;
 
     if (!inWater) {
       velocityY.current -= GRAVITY * dt;
       pos.y += velocityY.current * dt;
-      if (pos.y <= groundY) {
-        pos.y = groundY;
-        velocityY.current = 0;
-        isOnGround.current = true;
-      } else {
-        isOnGround.current = false;
-      }
+      if (pos.y <= groundY) { pos.y = groundY; velocityY.current = 0; isOnGround.current = true; }
+      else { isOnGround.current = false; }
     } else {
-      const waterSurface = -0.18;
-      pos.y += (waterSurface - pos.y) * Math.min(1, dt * 8);
+      pos.y += (-0.18 - pos.y) * Math.min(1, dt * 8);
       velocityY.current = 0;
       isOnGround.current = true;
     }
 
     const targetScale = giant ? 2.5 : 1;
-    const curScale = meshRef.current.scale.x;
-    const newScale = curScale + (targetScale - curScale) * Math.min(1, dt * 4);
+    const newScale = meshRef.current.scale.x + (targetScale - meshRef.current.scale.x) * Math.min(1, dt * 4);
     meshRef.current.scale.setScalar(newScale);
-
     meshRef.current.position.copy(pos);
     meshRef.current.rotation.y = rotationRef.current;
 
     playerState.position.copy(pos);
     playerState.rotation = rotationRef.current;
     playerState.facing.copy(fwd);
-
     setIsInWater(inWater);
 
-    const wantShoot = keys['KeyF'] || (keys['Space'] && !wantJump) || mobileInput.shoot;
-    if (wantShoot && shootCooldown.current <= 0) {
-      fireBullet();
-      shootCooldown.current = 0.3;
+    if ((keys['KeyF'] || mobileInput.shoot) && shootCooldown.current <= 0) {
+      fireBullet(); shootCooldown.current = 0.3;
     }
 
-    const isMoving = Math.abs(fwdTotal) > 0.1 || keys['KeyW'] || keys['ArrowUp'] || keys['KeyS'] || keys['ArrowDown'];
-    let action: string = 'idle';
-    if (!isOnGround.current && !inWater) {
-      action = 'jumping';
-    } else if (mobileInput.eat || (keys['KeyE'] && actionCooldown.current <= 0)) {
-      action = 'eating';
-      actionCooldown.current = 1;
-    } else if (mobileInput.sleep || (keys['KeyZ'] && actionCooldown.current <= 0)) {
-      action = 'sleeping';
-      actionCooldown.current = 2;
-    } else if (inWater) {
-      action = 'swimming';
-    } else if (isMoving) {
-      action = isRunning ? 'running' : 'walking';
-    }
+    const isMoving = Math.abs(fwdTotal) > 0.1;
+    let action = 'idle';
+    if (!isOnGround.current && !inWater) action = 'jumping';
+    else if (mobileInput.eat || (keys['KeyE'] && actionCooldown.current <= 0)) { action = 'eating'; actionCooldown.current = 1; }
+    else if (mobileInput.sleep || (keys['KeyZ'] && actionCooldown.current <= 0)) { action = 'sleeping'; actionCooldown.current = 2; }
+    else if (inWater) action = 'swimming';
+    else if (isMoving) action = isRunning ? 'running' : 'walking';
 
     setLocalAction(action);
     setCurrentAction(action as any);
 
     foodItems.filter(f => !f.collected).forEach(food => {
-      const foodPos = new THREE.Vector3(...food.position);
-      if (pos.distanceTo(foodPos) < (giant ? 3 : 1.2)) collectFood(food.id);
+      if (pos.distanceTo(new THREE.Vector3(...food.position)) < (giant ? 3 : 1.2)) collectFood(food.id);
     });
-
     potionItems.filter(p => !p.collected).forEach(potion => {
-      const pp = new THREE.Vector3(...potion.position);
-      if (pos.distanceTo(pp) < (giant ? 4 : 1.5)) collectPotion(potion.id);
+      if (pos.distanceTo(new THREE.Vector3(...potion.position)) < (giant ? 4 : 1.5)) collectPotion(potion.id);
     });
 
     const zoom = camZoom.current;
@@ -376,8 +313,7 @@ export function Capybara() {
     const camHeight = (giant ? 9 : 5) * Math.max(0.5, zoom * 0.8 + 0.2);
     const camOffset = new THREE.Vector3(0, camHeight, -camDist);
     camOffset.applyEuler(new THREE.Euler(0, rotationRef.current, 0));
-    const targetCamPos = pos.clone().add(camOffset);
-    camera.position.lerp(targetCamPos, 0.08);
+    camera.position.lerp(pos.clone().add(camOffset), 0.08);
     camera.lookAt(pos.clone().add(new THREE.Vector3(0, giant ? 2 : 0.8, 0)));
   });
 
@@ -390,8 +326,7 @@ export function Capybara() {
 
 export function getGroundHeight(x: number, z: number): number {
   for (const [px, pz, pr] of PONDS) {
-    const d = Math.sqrt((x - px) ** 2 + (z - pz) ** 2);
-    if (d < pr) return -0.5;
+    if (Math.sqrt((x - px) ** 2 + (z - pz) ** 2) < pr) return -0.5;
   }
   return 0;
 }

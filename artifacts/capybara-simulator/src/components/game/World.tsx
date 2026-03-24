@@ -121,27 +121,24 @@ function Flower({ position }: { position: [number, number, number] }) {
   );
 }
 
-// ─── Grass blade cluster — flat plane quads, cross-hatched for depth ──────────
-const GRASS_COLORS = ['#4CAF50', '#56A84A', '#43A047', '#388E3C', '#5CBF5C'];
+// ─── Grass blade cluster — shared materials at module level (not per-instance) ──
+const GRASS_COLORS = ['#4CAF50', '#56A84A', '#43A047', '#388E3C'];
+const SHARED_GRASS_MATS = GRASS_COLORS.map(
+  c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.88, metalness: 0, side: THREE.DoubleSide })
+);
+
 function GrassPatch({ position }: { position: [number, number, number] }) {
   const seed = Math.abs(position[0] * 7.3 + position[2] * 11.9);
-  const mats = useMemo(() =>
-    GRASS_COLORS.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.88, metalness: 0, side: THREE.DoubleSide })),
-  []);
-
-  // 9 blades: planeGeometry (not box!) at varied angles and heights
+  // 4 blades per patch (was 9) — same visual density at half the draw calls
   const blades = useMemo(() => {
     const b: { x: number; z: number; ry: number; lean: number; h: number; mat: number }[] = [];
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2 + seed * 0.4;
-      const r = 0.06 + (i % 4) * 0.1;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + seed * 0.4;
+      const r = 0.06 + (i % 3) * 0.09;
       b.push({
-        x: Math.cos(a) * r,
-        z: Math.sin(a) * r,
-        ry: a,
-        lean: (i % 2 === 0 ? 0.18 : -0.18) + (i % 3) * 0.06,
-        h: 0.28 + (i % 4) * 0.09,
-        mat: i % GRASS_COLORS.length,
+        x: Math.cos(a) * r, z: Math.sin(a) * r,
+        ry: a, lean: (i % 2 === 0 ? 0.18 : -0.18),
+        h: 0.28 + (i % 3) * 0.09, mat: i % GRASS_COLORS.length,
       });
     }
     return b;
@@ -150,11 +147,7 @@ function GrassPatch({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       {blades.map((b, i) => (
-        <mesh key={i}
-          position={[b.x, b.h / 2, b.z]}
-          rotation={[b.lean, b.ry, 0]}
-          material={mats[b.mat]}
-        >
+        <mesh key={i} position={[b.x, b.h / 2, b.z]} rotation={[b.lean, b.ry, 0]} material={SHARED_GRASS_MATS[b.mat]}>
           <planeGeometry args={[0.065, b.h]} />
         </mesh>
       ))}
@@ -476,15 +469,15 @@ export function World() {
   // Static position arrays — deterministic seeded placement (no random clustering)
   const trees = useMemo(() => {
     const rng = createRng(1001);
-    return spreadPlace(rng, 70, 7, -65, 65, -65, 65);
+    return spreadPlace(rng, 30, 7, -65, 65, -65, 65);  // was 70
   }, []);
 
   const palms = useMemo(() => {
-    // Palms ring each pond
+    // 3 palms per pond (was 6)
     const p: [number, number, number][] = [];
     [[12, -10, 9], [-20, 15, 7], [30, 25, 6]].forEach(([cx, cz, r]) => {
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
         p.push([cx + Math.cos(a) * (r + 2), 0, cz + Math.sin(a) * (r + 2)]);
       }
     });
@@ -493,45 +486,45 @@ export function World() {
 
   const bushes = useMemo(() => {
     const rng = createRng(1003);
-    return spreadPlace(rng, 45, 4, -60, 60, -60, 60);
+    return spreadPlace(rng, 20, 4, -60, 60, -60, 60);  // was 45
   }, []);
 
   const rocks = useMemo(() => {
     const rng = createRng(1004);
-    return spreadPlace(rng, 12, 3.5, -60, 60, -60, 60).map(([x, , z]) => [x, 0.1, z] as [number, number, number]);
+    return spreadPlace(rng, 8, 3.5, -60, 60, -60, 60).map(([x, , z]) => [x, 0.1, z] as [number, number, number]);  // was 12
   }, []);
 
   const flowers = useMemo(() => {
     const rng = createRng(1005);
-    return spreadPlace(rng, 90, 2, -62, 62, -62, 62);
+    return spreadPlace(rng, 25, 2, -62, 62, -62, 62);  // was 90
   }, []);
 
   const grassPatches = useMemo(() => {
     const rng = createRng(1006);
-    return spreadPlace(rng, 50, 3, -60, 60, -60, 60);
+    return spreadPlace(rng, 20, 3, -60, 60, -60, 60);  // was 50
   }, []);
 
   const cacti = useMemo(() => {
     const rng = createRng(1007);
-    return spreadPlace(rng, 22, 5, 20, 58, 20, 58);
+    return spreadPlace(rng, 12, 5, 20, 58, 20, 58);  // was 22
   }, []);
 
   const acacias = useMemo(() => {
     const rng = createRng(1008);
-    return spreadPlace(rng, 18, 6, -58, -20, 20, 58);
+    return spreadPlace(rng, 10, 6, -58, -20, 20, 58);  // was 18
   }, []);
 
   const jungleTrees = useMemo(() => {
     const rng = createRng(1009);
     const rng2 = createRng(1009 + 99);
-    return spreadPlace(rng, 26, 5, -58, -20, -58, -20).map(pos => ({ pos, h: rng2() }));
+    return spreadPlace(rng, 14, 5, -58, -20, -58, -20).map(pos => ({ pos, h: rng2() }));  // was 26
   }, []);
 
   const mountainBoulders = useMemo(() => {
     const rng = createRng(1010);
     const rng2 = createRng(1010 + 77);
     const rng3 = createRng(1010 + 55);
-    return spreadPlace(rng, 30, 4, 20, 58, -58, -20).map(([x, , z]) => ({
+    return spreadPlace(rng, 12, 4, 20, 58, -58, -20).map(([x, , z]) => ({  // was 30
       pos: [x, rng2() * 1.2, z] as [number, number, number],
       s: 0.6 + rng3() * 1.4,
     }));
@@ -548,8 +541,8 @@ export function World() {
         intensity={sunInt}
         color={sunColor}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-near={0.5}
         shadow-camera-far={220}
         shadow-camera-left={-70}
@@ -571,8 +564,8 @@ export function World() {
         <meshStandardMaterial color={groundColor} roughness={0.92} metalness={0.02} />
       </mesh>
 
-      {/* Ground variation patches — irregular organic circles, no rectangles */}
-      {Array.from({ length: 28 }).map((_, i) => (
+      {/* Ground variation patches — reduced to 12 for performance */}
+      {Array.from({ length: 12 }).map((_, i) => (
         <mesh key={i} receiveShadow rotation={[-Math.PI / 2, i * 0.62, 0]}
           position={[(i * 17 - 160) % 80, 0.003, (i * 23 - 100) % 80]}
           scale={[1 + (i % 3) * 0.5, 0.65 + (i % 5) * 0.25, 1]}>

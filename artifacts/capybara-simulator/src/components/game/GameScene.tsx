@@ -66,8 +66,7 @@ function SceneContents() {
 
       {phase === 'playing' && (
         <>
-          {/* Capybara model is a large GLB — own Suspense so world renders while it loads */}
-          {!racing && <Suspense fallback={null}><Capybara /></Suspense>}
+          {!racing && <Capybara />}
           <Enemies />
           <Bullets />
           <FriendCapybaras />

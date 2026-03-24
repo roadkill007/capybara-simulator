@@ -179,6 +179,8 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
 export function Enemies() {
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const spawnTimer = useRef(SPAWN_INTERVAL);
+  const pendingDamage = useRef(0);
+  const pendingKills = useRef(0);
   const { phase, damagePlayer, killEnemy, soccerPhase, shootingPhase, racePhase } = useGameStore();
 
   // Keep enemyList in sync
@@ -225,11 +227,14 @@ export function Enemies() {
       racePhase === 'countdown' ||
       racePhase === 'racing';
 
+    // Reset pending side-effects for this frame
+    pendingDamage.current = 0;
+    pendingKills.current = 0;
+
     setEnemies(prev => prev.map(enemy => {
       // Tick down death animation then mark for removal
       if (enemy.state === 'dead') {
-        const updated = { ...enemy, deathTimer: enemy.deathTimer - dt };
-        return updated;
+        return { ...enemy, deathTimer: enemy.deathTimer - dt };
       }
 
       const updated = { ...enemy };
@@ -253,9 +258,9 @@ export function Enemies() {
 
       // Movement
       if (updated.state === 'attack') {
-        // Deal damage
         if (updated.stateTimer <= 0) {
-          damagePlayer(ENEMY_DAMAGE);
+          // Accumulate — apply AFTER setEnemies to avoid setState-during-render
+          pendingDamage.current += ENEMY_DAMAGE;
           updated.stateTimer = 1.5;
         }
       } else if (updated.state === 'chase') {
@@ -276,7 +281,6 @@ export function Enemies() {
           enemy.position.y,
           enemy.position.z + updated.dir.z * 1.5 * dt
         );
-        // Clamp
         updated.position.x = Math.max(-55, Math.min(55, updated.position.x));
         updated.position.z = Math.max(-55, Math.min(55, updated.position.z));
       }
@@ -289,12 +293,17 @@ export function Enemies() {
         if (updated.health <= 0) {
           updated.state = 'dead';
           updated.deathTimer = 1.5;
-          killEnemy();
+          // Accumulate — apply AFTER setEnemies
+          pendingKills.current += 1;
         }
       }
 
       return updated;
-    }).filter(e => !(e.state === 'dead' && e.deathTimer <= 0))); // remove after death animation
+    }).filter(e => !(e.state === 'dead' && e.deathTimer <= 0)));
+
+    // Apply side-effects outside the updater to avoid setState-during-render
+    if (pendingDamage.current > 0) damagePlayer(pendingDamage.current);
+    for (let k = 0; k < pendingKills.current; k++) killEnemy();
   });
 
   return (

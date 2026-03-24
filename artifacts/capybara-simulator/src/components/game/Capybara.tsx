@@ -168,11 +168,11 @@ function CapybaraBody({ action, isInWater, invincible, isGiant }: {
         rotation={[0, Math.PI, 0]}
       />
 
-      {/* Water ripple ring when swimming */}
+      {/* Subtle water disturbance ring when swimming */}
       {isInWater && (
-        <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.55, 0.78, 20]} />
-          <meshStandardMaterial color="#4FA8E8" transparent opacity={0.5} roughness={0.1} metalness={0.2} />
+        <mesh position={[0, -0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.42, 0.52, 24]} />
+          <meshStandardMaterial color="#A8D8F0" transparent opacity={0.18} roughness={0.05} metalness={0.1} />
         </mesh>
       )}
 

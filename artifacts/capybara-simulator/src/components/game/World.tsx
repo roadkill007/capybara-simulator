@@ -57,18 +57,21 @@ function Tree({ position, scale = 1 }: { position: [number, number, number]; sca
 }
 
 // ─── Palm ────────────────────────────────────────────────────────────────────
+const palmLeafMat = new THREE.MeshStandardMaterial({ color: '#3A8C2A', roughness: 0.80, metalness: 0, side: THREE.DoubleSide });
 function PalmTree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <mesh position={[0, 1.5, 0]} rotation={[0.1, 0, 0.15]} castShadow material={MAT.palmBark}>
         <cylinderGeometry args={[0.12, 0.18, 3, 7]} />
       </mesh>
-      {[0, 1, 2, 3, 4, 5].map(i => {
-        const angle = (i / 6) * Math.PI * 2;
+      {[0, 1, 2, 3, 4, 5, 6].map(i => {
+        const angle = (i / 7) * Math.PI * 2;
         return (
-          <mesh key={i} position={[Math.cos(angle) * 1.2, 3.2, Math.sin(angle) * 1.2]}
-            rotation={[0.5, angle, 0]} castShadow material={MAT.palmLeaf}>
-            <boxGeometry args={[0.1, 0.04, 1.6]} />
+          <mesh key={i}
+            position={[Math.cos(angle) * 1.1, 3.1, Math.sin(angle) * 1.1]}
+            rotation={[0.55, angle, 0]}
+            castShadow material={palmLeafMat}>
+            <planeGeometry args={[0.22, 1.7]} />
           </mesh>
         );
       })}
@@ -118,20 +121,43 @@ function Flower({ position }: { position: [number, number, number] }) {
   );
 }
 
-// ─── Grass blade cluster ──────────────────────────────────────────────────────
+// ─── Grass blade cluster — flat plane quads, cross-hatched for depth ──────────
+const GRASS_COLORS = ['#4CAF50', '#56A84A', '#43A047', '#388E3C', '#5CBF5C'];
 function GrassPatch({ position }: { position: [number, number, number] }) {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#4CAF50', roughness: 0.9, metalness: 0, side: THREE.DoubleSide }), []);
+  const seed = Math.abs(position[0] * 7.3 + position[2] * 11.9);
+  const mats = useMemo(() =>
+    GRASS_COLORS.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.88, metalness: 0, side: THREE.DoubleSide })),
+  []);
+
+  // 9 blades: planeGeometry (not box!) at varied angles and heights
+  const blades = useMemo(() => {
+    const b: { x: number; z: number; ry: number; lean: number; h: number; mat: number }[] = [];
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + seed * 0.4;
+      const r = 0.06 + (i % 4) * 0.1;
+      b.push({
+        x: Math.cos(a) * r,
+        z: Math.sin(a) * r,
+        ry: a,
+        lean: (i % 2 === 0 ? 0.18 : -0.18) + (i % 3) * 0.06,
+        h: 0.28 + (i % 4) * 0.09,
+        mat: i % GRASS_COLORS.length,
+      });
+    }
+    return b;
+  }, [seed]);
+
   return (
     <group position={position}>
-      {Array.from({ length: 6 }).map((_, i) => {
-        const angle = (i / 6) * Math.PI * 2;
-        const r = 0.12 + (i % 3) * 0.12;
-        return (
-          <mesh key={i} position={[Math.cos(angle) * r, 0.2, Math.sin(angle) * r]} rotation={[0, angle, (i % 2 === 0 ? 0.15 : -0.15)]} material={mat}>
-            <boxGeometry args={[0.04, 0.44 + (i % 3) * 0.1, 0.04]} />
-          </mesh>
-        );
-      })}
+      {blades.map((b, i) => (
+        <mesh key={i}
+          position={[b.x, b.h / 2, b.z]}
+          rotation={[b.lean, b.ry, 0]}
+          material={mats[b.mat]}
+        >
+          <planeGeometry args={[0.065, b.h]} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -193,7 +219,7 @@ function JungleTree({ position, height = 1 }: { position: [number, number, numbe
         const a = (i / 4) * Math.PI * 2;
         return (
           <mesh key={i} position={[Math.cos(a) * 1.5, h * 0.55, Math.sin(a) * 1.5]} rotation={[0.5, a, 0]} material={MAT.savanna}>
-            <boxGeometry args={[0.08, 0.04, 1.4]} />
+            <planeGeometry args={[0.28, 1.4]} />
           </mesh>
         );
       })}
@@ -309,9 +335,11 @@ function FoodDisplay({ food }: { food: { id: string; type: string; position: [nu
       )}
       {food.type === 'grass' && (
         <group>
-          {[-0.12, 0, 0.12].map((x, i) => (
-            <mesh key={i} position={[x, 0.18, i * 0.05]} rotation={[0, 0, x * 0.5]} material={grassMat}>
-              <boxGeometry args={[0.06, 0.45, 0.06]} />
+          {[-0.12, -0.04, 0.04, 0.13].map((x, i) => (
+            <mesh key={i} position={[x, 0.22, i * 0.04 - 0.06]}
+              rotation={[0.12 * (i % 2 === 0 ? 1 : -1), x * 1.5 + i * 0.7, 0]}
+              material={grassMat}>
+              <planeGeometry args={[0.07, 0.44 + i * 0.04]} />
             </mesh>
           ))}
         </group>
@@ -470,7 +498,7 @@ export function World() {
 
   const rocks = useMemo(() => {
     const rng = createRng(1004);
-    return spreadPlace(rng, 30, 3.5, -60, 60, -60, 60).map(([x, , z]) => [x, 0.1, z] as [number, number, number]);
+    return spreadPlace(rng, 12, 3.5, -60, 60, -60, 60).map(([x, , z]) => [x, 0.1, z] as [number, number, number]);
   }, []);
 
   const flowers = useMemo(() => {
@@ -543,15 +571,16 @@ export function World() {
         <meshStandardMaterial color={groundColor} roughness={0.92} metalness={0.02} />
       </mesh>
 
-      {/* Ground variation patches — natural colour variation */}
-      {Array.from({ length: 24 }).map((_, i) => (
-        <mesh key={i} receiveShadow rotation={[-Math.PI / 2, 0, i * 0.5]}
-          position={[(i * 17 - 160) % 80, 0.003, (i * 23 - 100) % 80]}>
-          <planeGeometry args={[9 + (i % 3) * 5, 7 + (i % 5) * 3]} />
+      {/* Ground variation patches — irregular organic circles, no rectangles */}
+      {Array.from({ length: 28 }).map((_, i) => (
+        <mesh key={i} receiveShadow rotation={[-Math.PI / 2, i * 0.62, 0]}
+          position={[(i * 17 - 160) % 80, 0.003, (i * 23 - 100) % 80]}
+          scale={[1 + (i % 3) * 0.5, 0.65 + (i % 5) * 0.25, 1]}>
+          <circleGeometry args={[4 + (i % 4) * 1.5, 12]} />
           <meshStandardMaterial
-            color={isDark ? '#264226' : '#558A3C'}
-            roughness={0.90} metalness={0.01}
-            transparent opacity={0.7}
+            color={isDark ? '#264226' : (i % 3 === 0 ? '#558A3C' : i % 3 === 1 ? '#4E8236' : '#5E9245')}
+            roughness={0.92} metalness={0.01}
+            transparent opacity={0.65}
           />
         </mesh>
       ))}
@@ -612,13 +641,19 @@ export function World() {
       {jungleTrees.map(({ pos, h }, i) => <JungleTree key={`j-${i}`} position={pos} height={h} />)}
       {mountainBoulders.map(({ pos, s }, i) => <Boulder key={`b-${i}`} position={pos} scale={s} />)}
 
-      {/* Mountain cliff wall */}
-      {Array.from({ length: 8 }).map((_, i) => (
-        <mesh key={`cliff-${i}`} castShadow position={[18 + i * 5.5, 1.0 + Math.sin(i * 1.3) * 0.5, -18]}>
-          <boxGeometry args={[4.5 + Math.sin(i) * 1.5, 2.0 + Math.sin(i * 0.8) * 1.2, 1.2]} />
-          <meshStandardMaterial color={isDark ? '#455A64' : '#607D8B'} roughness={0.88} metalness={0.12} />
-        </mesh>
-      ))}
+      {/* Mountain cliff wall — irregular boulders instead of boxes */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const s = 0.9 + Math.sin(i * 1.7) * 0.5;
+        return (
+          <mesh key={`cliff-${i}`} castShadow
+            position={[18 + i * 4.8, 0.5 + Math.sin(i * 1.3) * 0.35, -18 + Math.sin(i * 0.9) * 1.2]}
+            rotation={[i * 0.3, i * 0.6, i * 0.2]}
+            scale={[s * 1.6, s * (1.1 + Math.sin(i * 0.5) * 0.5), s]}>
+            <dodecahedronGeometry args={[0.9, 0]} />
+            <meshStandardMaterial color={isDark ? '#455A64' : '#607D8B'} roughness={0.90} metalness={0.10} />
+          </mesh>
+        );
+      })}
 
       {/* Savanna dry riverbeds */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0.3]} position={[-30, 0.02, 30]}>

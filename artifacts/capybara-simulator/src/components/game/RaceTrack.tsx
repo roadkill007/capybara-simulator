@@ -46,26 +46,26 @@ function Kart({ position, facing, color, label }: {
       {/* Chassis */}
       <mesh castShadow position={[0, 0.22, 0]}>
         <boxGeometry args={[0.9, 0.28, 1.55]} />
-        <meshLambertMaterial color={color} />
+        <meshStandardMaterial roughness={0.8} metalness={0.05} color={color} />
       </mesh>
       {/* Cockpit bump */}
       <mesh castShadow position={[0, 0.44, 0.1]}>
         <boxGeometry args={[0.58, 0.22, 0.7]} />
-        <meshLambertMaterial color={color} />
+        <meshStandardMaterial roughness={0.8} metalness={0.05} color={color} />
       </mesh>
       {/* Rider head */}
       <mesh castShadow position={[0, 0.7, 0.1]}>
         <boxGeometry args={[0.38, 0.28, 0.32]} />
-        <meshLambertMaterial color="#8B6914" />
+        <meshStandardMaterial roughness={0.8} metalness={0.05} color="#8B6914" />
       </mesh>
       {/* Eyes */}
-      <mesh position={[-0.1, 0.75, 0.27]}><sphereGeometry args={[0.05, 6, 6]} /><meshLambertMaterial color="#111" /></mesh>
-      <mesh position={[0.1, 0.75, 0.27]}><sphereGeometry args={[0.05, 6, 6]} /><meshLambertMaterial color="#111" /></mesh>
+      <mesh position={[-0.1, 0.75, 0.27]}><sphereGeometry args={[0.05, 6, 6]} /><meshStandardMaterial roughness={0.8} metalness={0.05} color="#111" /></mesh>
+      <mesh position={[0.1, 0.75, 0.27]}><sphereGeometry args={[0.05, 6, 6]} /><meshStandardMaterial roughness={0.8} metalness={0.05} color="#111" /></mesh>
       {/* Wheels */}
       {([[-0.5, 0.15, 0.5], [0.5, 0.15, 0.5], [-0.5, 0.15, -0.5], [0.5, 0.15, -0.5]] as [number,number,number][]).map(([x,y,z], i) => (
         <mesh key={i} position={[x, y, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[0.2, 0.2, 0.18, 12]} />
-          <meshLambertMaterial color="#222" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#222" />
         </mesh>
       ))}
       {/* Name label above */}
@@ -105,7 +105,7 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
           {/* Base asphalt */}
           <mesh position={[pos.x, 0.04, pos.z]} rotation={[0, facing, 0]} receiveShadow>
             <boxGeometry args={[ROAD_W, 0.08, segLen]} />
-            <meshLambertMaterial color={isStart ? (i % 2 === 0 ? '#111' : '#eee') : (i % 6 < 3 ? roadColor : '#242424')} />
+            <meshStandardMaterial roughness={0.8} metalness={0.05} color={isStart ? (i % 2 === 0 ? '#111' : '#eee') : (i % 6 < 3 ? roadColor : '#242424')} />
           </mesh>
           {/* Center white dash */}
           {i % 4 === 0 && (
@@ -127,11 +127,11 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
           <group key={i}>
             <mesh position={[inner.x, 0.3, inner.z]} castShadow>
               <cylinderGeometry args={[0.15, 0.15, 0.55, 6]} />
-              <meshLambertMaterial color={bColor} />
+              <meshStandardMaterial roughness={0.8} metalness={0.05} color={bColor} />
             </mesh>
             <mesh position={[outer.x, 0.3, outer.z]} castShadow>
               <cylinderGeometry args={[0.15, 0.15, 0.55, 6]} />
-              <meshLambertMaterial color={bColor} />
+              <meshStandardMaterial roughness={0.8} metalness={0.05} color={bColor} />
             </mesh>
           </group>
         );
@@ -142,23 +142,23 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
         {/* Left pillar */}
         <mesh position={[-ROAD_W / 2 - 0.4, 2, 0]} castShadow>
           <cylinderGeometry args={[0.3, 0.35, 4, 8]} />
-          <meshLambertMaterial color="#FFD700" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#FFD700" />
         </mesh>
         {/* Right pillar */}
         <mesh position={[ROAD_W / 2 + 0.4, 2, 0]} castShadow>
           <cylinderGeometry args={[0.3, 0.35, 4, 8]} />
-          <meshLambertMaterial color="#FFD700" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#FFD700" />
         </mesh>
         {/* Crossbar */}
         <mesh position={[0, 4.2, 0]} castShadow>
           <boxGeometry args={[ROAD_W + 2.2, 0.5, 0.5]} />
-          <meshLambertMaterial color="#FFD700" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#FFD700" />
         </mesh>
         {/* Chequered banner */}
         {Array.from({ length: 8 }).map((_, i) => (
           <mesh key={i} position={[-3.5 + i, 3.7, 0]} castShadow>
             <boxGeometry args={[1, 0.55, 0.08]} />
-            <meshLambertMaterial color={i % 2 === 0 ? '#000' : '#fff'} />
+            <meshStandardMaterial roughness={0.8} metalness={0.05} color={i % 2 === 0 ? '#000' : '#fff'} />
           </mesh>
         ))}
       </group>
@@ -167,15 +167,15 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
       <group position={[CX + RX + 4.5, 0, CZ + 6]}>
         <mesh position={[0, 3, 0]} castShadow>
           <cylinderGeometry args={[0.15, 0.18, 6, 8]} />
-          <meshLambertMaterial color="#8B6914" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#8B6914" />
         </mesh>
         <mesh position={[0, 6.4, 0]} castShadow>
           <boxGeometry args={[4.2, 1.4, 0.2]} />
-          <meshLambertMaterial color="#FF4500" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#FF4500" />
         </mesh>
         <mesh position={[0, 5.6, 0]}>
           <boxGeometry args={[4.2, 0.3, 0.15]} />
-          <meshLambertMaterial color="#222" />
+          <meshStandardMaterial roughness={0.8} metalness={0.05} color="#222" />
         </mesh>
       </group>
 
@@ -189,17 +189,17 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
           {/* Bleachers base */}
           <mesh position={[0, 1, 0]} castShadow>
             <boxGeometry args={[7, 2, 4]} />
-            <meshLambertMaterial color={color as string} />
+            <meshStandardMaterial roughness={0.8} metalness={0.05} color={color as string} />
           </mesh>
           {/* Upper tier */}
           <mesh position={[0, 2.8, -0.8]} castShadow>
             <boxGeometry args={[7, 1.4, 2.4]} />
-            <meshLambertMaterial color={color as string} />
+            <meshStandardMaterial roughness={0.8} metalness={0.05} color={color as string} />
           </mesh>
           {/* Roof */}
           <mesh position={[0, 3.8, -0.4]} rotation={[0.18, 0, 0]} castShadow>
             <boxGeometry args={[7.4, 0.2, 3.5]} />
-            <meshLambertMaterial color="#ccc" />
+            <meshStandardMaterial roughness={0.8} metalness={0.05} color="#ccc" />
           </mesh>
         </group>
       ))}
@@ -207,15 +207,15 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
       {/* ── Pit lane area ── */}
       <mesh position={[CX + RX + 2.5, 0.04, CZ + 6]} receiveShadow>
         <boxGeometry args={[5, 0.06, 12]} />
-        <meshLambertMaterial color="#444" />
+        <meshStandardMaterial roughness={0.8} metalness={0.05} color="#444" />
       </mesh>
       <mesh position={[CX + RX + 5, 1.5, CZ + 6]} castShadow>
         <boxGeometry args={[0.2, 3, 12]} />
-        <meshLambertMaterial color="#888" />
+        <meshStandardMaterial roughness={0.8} metalness={0.05} color="#888" />
       </mesh>
       <mesh position={[CX + RX + 5.1, 3, CZ + 6]} rotation={[0, 0, 0.2]} castShadow>
         <boxGeometry args={[5, 0.15, 12.5]} />
-        <meshLambertMaterial color="#666" />
+        <meshStandardMaterial roughness={0.8} metalness={0.05} color="#666" />
       </mesh>
     </group>
   );

@@ -80,6 +80,7 @@
     "@react-three/fiber": "^9.5.0",
     "@react-three/postprocessing": "^3.0.4",
     "@react-three/rapier": "^2.2.0",
+    "postprocessing": "^6.39.0",
     "three": "^0.183.2",
     "zustand": "^5.0.12"
   }

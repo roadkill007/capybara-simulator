@@ -37,28 +37,28 @@ function FriendCapybara({ position, id }: { position: [number, number, number]; 
     <group ref={groupRef} position={position}>
       <mesh castShadow>
         <capsuleGeometry args={[0.28, 0.55, 6, 12]} />
-        <meshLambertMaterial color={bodyColor} />
+        <meshStandardMaterial color={bodyColor} roughness={0.85} metalness={0.02} />
       </mesh>
       <group position={[0, 0.2, 0.45]}>
         <mesh castShadow>
           <boxGeometry args={[0.42, 0.3, 0.38]} />
-          <meshLambertMaterial color={bodyColor} />
+          <meshStandardMaterial color={bodyColor} roughness={0.85} metalness={0.02} />
         </mesh>
         <mesh position={[-0.13, 0.08, 0.18]}>
           <sphereGeometry args={[0.045, 6, 6]} />
-          <meshLambertMaterial color="#111" />
+          <meshStandardMaterial color="#111111" roughness={0.05} metalness={0.15} />
         </mesh>
         <mesh position={[0.13, 0.08, 0.18]}>
           <sphereGeometry args={[0.045, 6, 6]} />
-          <meshLambertMaterial color="#111" />
+          <meshStandardMaterial color="#111111" roughness={0.05} metalness={0.15} />
         </mesh>
         <mesh position={[-0.16, 0.2, -0.04]} rotation={[0, 0, -0.3]}>
           <capsuleGeometry args={[0.055, 0.07, 4, 6]} />
-          <meshLambertMaterial color="#6B4F0F" />
+          <meshStandardMaterial color="#6B4F0F" roughness={0.88} metalness={0.01} />
         </mesh>
         <mesh position={[0.16, 0.2, -0.04]} rotation={[0, 0, 0.3]}>
           <capsuleGeometry args={[0.055, 0.07, 4, 6]} />
-          <meshLambertMaterial color="#6B4F0F" />
+          <meshStandardMaterial color="#6B4F0F" roughness={0.88} metalness={0.01} />
         </mesh>
       </group>
       {/* Friend tag */}

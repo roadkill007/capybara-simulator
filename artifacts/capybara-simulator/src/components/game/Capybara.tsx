@@ -77,10 +77,14 @@ function CapybaraBody({ action, isInWater, invincible, isGiant }: {
   });
 
   const flash = invincible && Math.floor(Date.now() / 120) % 2 === 0;
-  const bodyColor = isGiant ? (flash ? '#FFD700' : '#FF8C00') : (flash ? '#FF8888' : '#8B6914');
-  const darkColor = isGiant ? '#CC6600' : (flash ? '#CC5555' : '#6B4F0F');
+  const bodyColor = isGiant ? (flash ? '#FFD700' : '#FF8C00') : (flash ? '#FF9999' : '#8B6914');
+  const darkColor = isGiant ? '#CC6600' : (flash ? '#CC4444' : '#6B4F0F');
   const noseColor = '#5C3A1E';
-  const eyeColor = isGiant ? '#FF4400' : '#111';
+  const eyeColor  = isGiant ? '#FF4400' : '#111111';
+
+  // PBR material values — fur roughness, subtle metalness, eyes glossy
+  const bodyRoughness = isInWater ? 0.45 : 0.82;
+  const crownMat = new THREE.MeshStandardMaterial({ color: '#FFD700', roughness: 0.25, metalness: 0.85, emissive: '#AA7700', emissiveIntensity: 0.2 });
 
   return (
     <group ref={bodyRef}>
@@ -90,75 +94,74 @@ function CapybaraBody({ action, isInWater, invincible, isGiant }: {
         <meshBasicMaterial color={isGiant ? '#FF8C00' : '#ffffff'} transparent opacity={0} side={THREE.BackSide} />
       </mesh>
 
+      {/* Body — PBR fur material */}
       <mesh castShadow>
         <capsuleGeometry args={[0.35, 0.7, 8, 16]} />
-        <meshLambertMaterial color={bodyColor} />
+        <meshStandardMaterial color={bodyColor} roughness={bodyRoughness} metalness={0.02} />
       </mesh>
 
-      {/* Head — faces local +Z (forward) */}
+      {/* Head */}
       <group position={[0, 0.25, 0.55]}>
         <mesh castShadow>
           <boxGeometry args={[0.5, 0.38, 0.48]} />
-          <meshLambertMaterial color={bodyColor} />
+          <meshStandardMaterial color={bodyColor} roughness={bodyRoughness} metalness={0.02} />
         </mesh>
         {/* Snout */}
         <mesh position={[0, -0.04, 0.22]} castShadow>
           <boxGeometry args={[0.35, 0.22, 0.1]} />
-          <meshLambertMaterial color={darkColor} />
+          <meshStandardMaterial color={darkColor} roughness={0.85} metalness={0.02} />
         </mesh>
         {/* Nostrils */}
         <mesh position={[-0.08, -0.04, 0.27]}>
           <sphereGeometry args={[0.04, 8, 8]} />
-          <meshLambertMaterial color={noseColor} />
+          <meshStandardMaterial color={noseColor} roughness={0.7} metalness={0.05} />
         </mesh>
         <mesh position={[0.08, -0.04, 0.27]}>
           <sphereGeometry args={[0.04, 8, 8]} />
-          <meshLambertMaterial color={noseColor} />
+          <meshStandardMaterial color={noseColor} roughness={0.7} metalness={0.05} />
         </mesh>
-        {/* Eyes */}
+        {/* Eyes — glossy PBR */}
         <mesh position={[-0.16, 0.1, 0.22]}>
           <sphereGeometry args={[0.055, 8, 8]} />
-          <meshLambertMaterial color={eyeColor} />
+          <meshStandardMaterial color={eyeColor} roughness={0.05} metalness={0.15} />
         </mesh>
         <mesh position={[0.16, 0.1, 0.22]}>
           <sphereGeometry args={[0.055, 8, 8]} />
-          <meshLambertMaterial color={eyeColor} />
+          <meshStandardMaterial color={eyeColor} roughness={0.05} metalness={0.15} />
         </mesh>
         {/* Eye shine */}
         <mesh position={[-0.14, 0.12, 0.265]}>
-          <sphereGeometry args={[0.018, 6, 6]} />
-          <meshLambertMaterial color="white" />
+          <sphereGeometry args={[0.018, 5, 5]} />
+          <meshStandardMaterial color="white" roughness={0.1} metalness={0.1} emissive="white" emissiveIntensity={0.5} />
         </mesh>
         <mesh position={[0.18, 0.12, 0.265]}>
-          <sphereGeometry args={[0.018, 6, 6]} />
-          <meshLambertMaterial color="white" />
+          <sphereGeometry args={[0.018, 5, 5]} />
+          <meshStandardMaterial color="white" roughness={0.1} metalness={0.1} emissive="white" emissiveIntensity={0.5} />
         </mesh>
         {/* Ears */}
         <mesh ref={earRef} position={[-0.2, 0.24, -0.05]} rotation={[0, 0, -0.3]} castShadow>
           <capsuleGeometry args={[0.07, 0.09, 4, 8]} />
-          <meshLambertMaterial color={darkColor} />
+          <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
         </mesh>
         <mesh position={[0.2, 0.24, -0.05]} rotation={[0, 0, 0.3]} castShadow>
           <capsuleGeometry args={[0.07, 0.09, 4, 8]} />
-          <meshLambertMaterial color={darkColor} />
+          <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
         </mesh>
         {/* Mouth */}
         <mesh ref={mouthRef} position={[0, -0.12, 0.25]}>
           <boxGeometry args={[0.15, 0.03, 0.05]} />
-          <meshLambertMaterial color={noseColor} />
+          <meshStandardMaterial color={noseColor} roughness={0.7} metalness={0.02} />
         </mesh>
-        {/* Giant crown */}
+        {/* Giant crown — metallic gold PBR */}
         {isGiant && (
           <group position={[0, 0.22, 0]}>
             {[-0.12, 0, 0.12].map((x, i) => (
-              <mesh key={i} position={[x, i === 1 ? 0.1 : 0.06, 0]}>
+              <mesh key={i} position={[x, i === 1 ? 0.1 : 0.06, 0]} material={crownMat}>
                 <coneGeometry args={[0.05, 0.14, 6]} />
-                <meshLambertMaterial color="#FFD700" />
               </mesh>
             ))}
-            <mesh position={[0, 0, 0]}>
+            <mesh position={[0, 0, 0]} material={crownMat}>
               <boxGeometry args={[0.38, 0.07, 0.12]} />
-              <meshLambertMaterial color="#FFD700" />
             </mesh>
           </group>
         )}
@@ -168,19 +171,19 @@ function CapybaraBody({ action, isInWater, invincible, isGiant }: {
       {([[-0.28, -0.35, 0.22], [0.28, -0.35, 0.22], [-0.28, -0.35, -0.22], [0.28, -0.35, -0.22]] as [number,number,number][]).map(([x, y, z], i) => (
         <mesh key={i} ref={legRefs[Math.min(i, 2)]} position={[x, y, z]} castShadow>
           <capsuleGeometry args={[0.09, 0.22, 4, 8]} />
-          <meshLambertMaterial color={darkColor} />
+          <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
         </mesh>
       ))}
 
       <mesh ref={tailRef} position={[0, 0.1, -0.55]} rotation={[0.3, 0, 0]} castShadow>
         <capsuleGeometry args={[0.05, 0.1, 4, 8]} />
-        <meshLambertMaterial color={darkColor} />
+        <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
       </mesh>
 
       {isInWater && (
         <mesh position={[0, -0.28, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.5, 0.7, 16]} />
-          <meshBasicMaterial color="#4FA8E8" transparent opacity={0.4} />
+          <meshStandardMaterial color="#4FA8E8" transparent opacity={0.45} roughness={0.1} metalness={0.2} />
         </mesh>
       )}
     </group>

@@ -68,24 +68,25 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
   if (enemy.state === 'dead' && enemy.deathTimer <= 0) return null;
 
   const isChasing = enemy.state === 'chase' || enemy.state === 'attack';
-  const bodyColor = isChasing ? '#4A0A0A' : '#6B1010';
-  const darkColor = '#2A0505';
   const flash = enemy.hitFlash > 0;
+  const bodyColor = flash ? '#FF4444' : isChasing ? '#3D0808' : '#6B1010';
+  const darkColor = '#1A0303';
 
   return (
     <group ref={groupRef} position={enemy.position.toArray() as [number, number, number]}>
       <group>
-        {/* Body */}
+        {/* Body — PBR dark fur */}
         <mesh castShadow>
           <capsuleGeometry args={[0.38, 0.75, 8, 16]} />
-          <meshLambertMaterial color={flash ? '#FF4444' : bodyColor} />
+          <meshStandardMaterial color={bodyColor} roughness={0.85} metalness={0.03}
+            emissive={isChasing ? '#440000' : '#000000'} emissiveIntensity={isChasing ? 0.3 : 0} />
         </mesh>
 
-        {/* Spiky back spines (scary!) */}
+        {/* Spiky back spines */}
         {[-0.2, 0, 0.2].map((x, i) => (
-          <mesh key={i} position={[x, 0.5, 0]} rotation={[0, 0, (x * 0.3)]}>
+          <mesh key={i} position={[x, 0.5, 0]} rotation={[0, 0, x * 0.3]} castShadow>
             <coneGeometry args={[0.06, 0.35, 6]} />
-            <meshLambertMaterial color="#1A0000" />
+            <meshStandardMaterial color="#0A0000" roughness={0.7} metalness={0.08} />
           </mesh>
         ))}
 
@@ -93,47 +94,48 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
         <group position={[0, 0.28, 0.6]}>
           <mesh castShadow>
             <boxGeometry args={[0.52, 0.4, 0.5]} />
-            <meshLambertMaterial color={flash ? '#FF4444' : bodyColor} />
+            <meshStandardMaterial color={bodyColor} roughness={0.85} metalness={0.03}
+              emissive={isChasing ? '#440000' : '#000000'} emissiveIntensity={isChasing ? 0.3 : 0} />
           </mesh>
 
-          {/* Angry eyes — glowing red */}
+          {/* Angry glowing eyes */}
           <mesh position={[-0.16, 0.1, 0.24]}>
             <sphereGeometry args={[0.07, 8, 8]} />
-            <meshBasicMaterial color="#FF0000" />
+            <meshStandardMaterial color="#FF0000" roughness={0.05} metalness={0.1} emissive="#FF0000" emissiveIntensity={1.2} />
           </mesh>
           <mesh position={[0.16, 0.1, 0.24]}>
             <sphereGeometry args={[0.07, 8, 8]} />
-            <meshBasicMaterial color="#FF0000" />
+            <meshStandardMaterial color="#FF0000" roughness={0.05} metalness={0.1} emissive="#FF0000" emissiveIntensity={1.2} />
           </mesh>
 
           {/* Angry brow */}
           <mesh position={[-0.14, 0.2, 0.24]} rotation={[0, 0, 0.4]}>
             <boxGeometry args={[0.15, 0.04, 0.05]} />
-            <meshLambertMaterial color={darkColor} />
+            <meshStandardMaterial color={darkColor} roughness={0.90} metalness={0.01} />
           </mesh>
           <mesh position={[0.14, 0.2, 0.24]} rotation={[0, 0, -0.4]}>
             <boxGeometry args={[0.15, 0.04, 0.05]} />
-            <meshLambertMaterial color={darkColor} />
+            <meshStandardMaterial color={darkColor} roughness={0.90} metalness={0.01} />
           </mesh>
 
-          {/* Fangs */}
+          {/* Fangs — bone PBR */}
           <mesh position={[-0.08, -0.16, 0.26]}>
             <coneGeometry args={[0.04, 0.12, 6]} />
-            <meshLambertMaterial color="white" />
+            <meshStandardMaterial color="#E8E0D0" roughness={0.55} metalness={0.05} />
           </mesh>
           <mesh position={[0.08, -0.16, 0.26]}>
             <coneGeometry args={[0.04, 0.12, 6]} />
-            <meshLambertMaterial color="white" />
+            <meshStandardMaterial color="#E8E0D0" roughness={0.55} metalness={0.05} />
           </mesh>
 
-          {/* Dark ears */}
-          <mesh position={[-0.22, 0.26, -0.04]} rotation={[0, 0, -0.3]}>
+          {/* Ears */}
+          <mesh position={[-0.22, 0.26, -0.04]} rotation={[0, 0, -0.3]} castShadow>
             <capsuleGeometry args={[0.08, 0.1, 4, 8]} />
-            <meshLambertMaterial color={darkColor} />
+            <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
           </mesh>
-          <mesh position={[0.22, 0.26, -0.04]} rotation={[0, 0, 0.3]}>
+          <mesh position={[0.22, 0.26, -0.04]} rotation={[0, 0, 0.3]} castShadow>
             <capsuleGeometry args={[0.08, 0.1, 4, 8]} />
-            <meshLambertMaterial color={darkColor} />
+            <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
           </mesh>
         </group>
 
@@ -141,19 +143,24 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
         {[[-0.3, -0.38, 0.25], [0.3, -0.38, 0.25], [-0.3, -0.38, -0.25], [0.3, -0.38, -0.25]].map(([x, y, z], i) => (
           <mesh key={i} position={[x, y, z]} castShadow>
             <capsuleGeometry args={[0.1, 0.24, 4, 8]} />
-            <meshLambertMaterial color={darkColor} />
+            <meshStandardMaterial color={darkColor} roughness={0.88} metalness={0.01} />
           </mesh>
         ))}
 
         {/* Health bar */}
         <group position={[0, 1.2, 0]}>
-          <mesh position={[0, 0, 0]}>
+          <mesh>
             <boxGeometry args={[0.8, 0.1, 0.05]} />
-            <meshBasicMaterial color="#333" />
+            <meshStandardMaterial color="#222222" roughness={0.8} metalness={0.3} />
           </mesh>
           <mesh position={[(enemy.health / 100 - 1) * 0.4, 0, 0.01]}>
             <boxGeometry args={[0.8 * (enemy.health / 100), 0.08, 0.05]} />
-            <meshBasicMaterial color={enemy.health > 50 ? '#44FF44' : enemy.health > 25 ? '#FFAA00' : '#FF2222'} />
+            <meshStandardMaterial
+              color={enemy.health > 50 ? '#44FF44' : enemy.health > 25 ? '#FFAA00' : '#FF2222'}
+              emissive={enemy.health > 50 ? '#22AA22' : enemy.health > 25 ? '#AA6600' : '#AA0000'}
+              emissiveIntensity={0.4}
+              roughness={0.4} metalness={0.2}
+            />
           </mesh>
         </group>
 
@@ -161,7 +168,7 @@ function ScaryCapybara({ enemy }: { enemy: EnemyData }) {
         {isChasing && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]}>
             <ringGeometry args={[0.6, 0.9, 16]} />
-            <meshBasicMaterial color="#FF0000" transparent opacity={0.25 + Math.sin(Date.now() * 0.005) * 0.1} />
+            <meshStandardMaterial color="#FF0000" transparent opacity={0.3} roughness={0.2} metalness={0.3} emissive="#AA0000" emissiveIntensity={0.5} />
           </mesh>
         )}
       </group>

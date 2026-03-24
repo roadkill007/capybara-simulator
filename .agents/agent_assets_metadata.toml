@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "bMXdmFkBnU0YeNytpqsBp"
+uri = "file://README.md"
+type = "text"
+title = "Capybara Simulator 3D — GitHub README"

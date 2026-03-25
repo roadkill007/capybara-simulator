@@ -200,13 +200,37 @@ export function Capybara() {
   const [localAction, setLocalAction] = useState<string>('idle');
 
   useEffect(() => {
+    // Flush ALL stale input state from the previous session
+    for (const k in keys) keys[k] = false;
+    jumpPressed.current = false;
+    mobileInput.joystickX = 0;
+    mobileInput.joystickY = 0;
+    mobileInput.jump = false;
+    mobileInput.shoot = false;
+    mobileInput.eat = false;
+    mobileInput.sleep = false;
+    mobileInput.run = false;
+
     const onKey = (e: KeyboardEvent) => {
       keys[e.code] = e.type === 'keydown';
       if (e.code === 'Space' && e.type === 'keydown') jumpPressed.current = true;
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKey); };
+    return () => {
+      // Clear again on unmount so the next mount always starts clean
+      for (const k in keys) keys[k] = false;
+      jumpPressed.current = false;
+      mobileInput.joystickX = 0;
+      mobileInput.joystickY = 0;
+      mobileInput.jump = false;
+      mobileInput.shoot = false;
+      mobileInput.eat = false;
+      mobileInput.sleep = false;
+      mobileInput.run = false;
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKey);
+    };
   }, []);
 
   useEffect(() => {

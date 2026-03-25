@@ -179,7 +179,7 @@ export function ShootingRange() {
   const roofMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#263238', roughness: 0.80, metalness: 0.2, side: THREE.DoubleSide }), []);
   const poleMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#90A4AE', roughness: 0.7, metalness: 0.5 }), []);
   const deskMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#795548', roughness: 0.88, metalness: 0.05 }), []);
-  const signMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#B71C1C', roughness: 0.6, metalness: 0.2, emissive: '#5A0E0E', emissiveIntensity: 0.3 }), []);
+  const signMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#263238', roughness: 0.8, metalness: 0.3 }), []);
 
   return (
     <group>
@@ -199,12 +199,12 @@ export function ShootingRange() {
         );
       })}
 
-      {/* Lane dividers */}
+      {/* Lane dividers — thin low curbs only, don't block player view */}
       {Array.from({ length: NUM_LANES - 1 }).map((_, i) => {
         const lx = RANGE_CX - RANGE_HW + (i + 1) * ((RANGE_HW * 2) / NUM_LANES);
         return (
-          <mesh key={i} position={[lx, 1.2, RANGE_CZ]} castShadow material={wallMat}>
-            <boxGeometry args={[0.18, 2.4, RANGE_HD * 2]} />
+          <mesh key={i} position={[lx, 0.15, RANGE_CZ]} castShadow material={wallMat}>
+            <boxGeometry args={[0.18, 0.3, RANGE_HD * 2]} />
           </mesh>
         );
       })}
@@ -246,16 +246,13 @@ export function ShootingRange() {
         );
       })}
 
-      {/* Entrance sign */}
+      {/* Entrance markers — small poles only, no blocking sign panel */}
       <group position={[RANGE_CX, 0, RANGE_CZ - RANGE_HD - 1.2]}>
-        <mesh position={[-2, 1.1, 0]} castShadow material={poleMat}>
+        <mesh position={[-5, 1.1, 0]} castShadow material={poleMat}>
           <cylinderGeometry args={[0.12, 0.14, 2.2, 7]} />
         </mesh>
-        <mesh position={[2, 1.1, 0]} castShadow material={poleMat}>
+        <mesh position={[5, 1.1, 0]} castShadow material={poleMat}>
           <cylinderGeometry args={[0.12, 0.14, 2.2, 7]} />
-        </mesh>
-        <mesh position={[0, 2.5, 0]} castShadow material={signMat}>
-          <boxGeometry args={[9.5, 1.8, 0.28]} />
         </mesh>
       </group>
 

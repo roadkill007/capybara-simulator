@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { Suspense, useState, Component, type ReactNode } from 'react';
 import * as THREE from 'three';
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { EffectComposer, Vignette } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
 import { World } from './World';
 import { Capybara } from './Capybara';
@@ -77,7 +77,6 @@ function SceneContents() {
       )}
 
       <EffectComposer>
-        <Bloom luminanceThreshold={0.75} luminanceSmoothing={0.4} intensity={0.55} blendFunction={BlendFunction.ADD} />
         <Vignette offset={0.25} darkness={0.45} blendFunction={BlendFunction.NORMAL} />
       </EffectComposer>
     </>
@@ -101,7 +100,7 @@ export function GameScene() {
             toneMappingExposure: 1.15,
             failIfMajorPerformanceCaveat: false,
           }}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
         >
           <Suspense fallback={null}>
             <SceneContents />

@@ -52,8 +52,8 @@ export function ProximityZones() {
       setSoccerPrompt(true);
     }
     if (!inSoccer && wasInSoccer.current) {
-      if (soccerPhase === 'prompt')  setSoccerPrompt(false);
-      if (soccerPhase === 'playing') endSoccer();   // left field mid-game → score and end
+      if (soccerPhase === 'prompt') setSoccerPrompt(false);
+      // Don't auto-end playing — player can roam freely; use E key to exit
     }
     wasInSoccer.current = inSoccer;
 

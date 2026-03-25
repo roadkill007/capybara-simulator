@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../../store/gameStore';
 import { playerState } from './playerState';
+import { mobileInput } from './mobileInput';
 
 // ─── Track geometry constants ────────────────────────────────────────────────
 const CX = 10, CZ = -38;        // oval centre in world space
@@ -299,14 +300,22 @@ function RaceGameplay() {
     if (racePhase !== 'racing') return;
     raceTimer.current += dt;
 
-    // ─ Player movement ─
-    const accel = raceKeys['KeyW'] || raceKeys['ArrowUp'] ? 0.06 : raceKeys['KeyS'] || raceKeys['ArrowDown'] ? -0.08 : -0.01;
+    // ─ Player movement (keyboard + mobile joystick) ─
+    const joyFwd = mobileInput.joystickY;   // positive = forward on joystick
+    const joyX   = mobileInput.joystickX;
+
+    const goFwd  = raceKeys['KeyW'] || raceKeys['ArrowUp']    || joyFwd >  0.25;
+    const goBack = raceKeys['KeyS'] || raceKeys['ArrowDown']  || joyFwd < -0.25;
+    const goLeft = raceKeys['KeyA'] || raceKeys['ArrowLeft']  || joyX   < -0.25;
+    const goRight= raceKeys['KeyD'] || raceKeys['ArrowRight'] || joyX   >  0.25;
+
+    const accel = goFwd ? 0.06 : goBack ? -0.08 : -0.01;
     playerSpeed.current = THREE.MathUtils.clamp(
       playerSpeed.current + accel * dt * 60,
       0.12, 0.62
     );
-    if (raceKeys['KeyA'] || raceKeys['ArrowLeft']) playerLane.current = Math.max(-4.4, playerLane.current - 4 * dt);
-    if (raceKeys['KeyD'] || raceKeys['ArrowRight']) playerLane.current = Math.min(4.4, playerLane.current + 4 * dt);
+    if (goLeft)  playerLane.current = Math.max(-4.4, playerLane.current - 4 * dt);
+    if (goRight) playerLane.current = Math.min(4.4,  playerLane.current + 4 * dt);
 
     playerT.current += playerSpeed.current * dt;
 

@@ -8,6 +8,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../../store/gameStore';
 import { playerState } from './playerState';
+import { mobileInput } from './mobileInput';
 
 export const RANGE_CX = 2;
 export const RANGE_CZ = 50;
@@ -62,6 +63,7 @@ export function ShootingRange() {
 
   const shotFired = useRef(false);
   const keyDown = useRef(false);
+  const mobileShootDown = useRef(false);
 
   // Key listener for F key shot
   useEffect(() => {
@@ -96,6 +98,14 @@ export function ShootingRange() {
         });
       }
       return;
+    }
+
+    // Mobile SHOOT button — fire on leading edge (press, not hold)
+    if (mobileInput.shoot && !mobileShootDown.current) {
+      mobileShootDown.current = true;
+      shotFired.current = true;
+    } else if (!mobileInput.shoot) {
+      mobileShootDown.current = false;
     }
 
     tickShooting(dt);
@@ -159,7 +169,7 @@ export function ShootingRange() {
       ts.forEach((t, i) => {
         if (!t.active || t.hit) return;
         const center = new THREE.Vector3(t.laneX, t.y, TARGET_ROW_Z);
-        if (ray.distanceToPoint(center) < 1.25) {
+        if (ray.distanceToPoint(center) < 1.8) {
           t.hit = true;
           t.active = false;
           t.cooldown = 0;

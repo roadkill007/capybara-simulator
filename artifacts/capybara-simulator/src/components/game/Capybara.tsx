@@ -258,6 +258,11 @@ export function Capybara() {
     const fwdTotal = fwdKbd !== 0 ? fwdKbd : joyY;
     if (fwdTotal > 0.1) pos.addScaledVector(fwd, speed * fwdTotal * dt);
     if (fwdTotal < -0.1) pos.addScaledVector(fwd, speed * fwdTotal * 0.6 * dt);
+
+    // Consume any external impulse (e.g. ball collision bounce)
+    pos.add(playerState.externalForce);
+    playerState.externalForce.set(0, 0, 0);
+
     pos.x = Math.max(-58, Math.min(58, pos.x));
     pos.z = Math.max(-58, Math.min(58, pos.z));
 

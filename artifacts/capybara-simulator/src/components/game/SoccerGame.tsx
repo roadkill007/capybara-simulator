@@ -179,15 +179,22 @@ export function SoccerGame() {
     if (b.z < FIELD_B) { b.z = FIELD_B + 0.3; b.vz *= -0.65; }
     if (b.z > FIELD_F) { b.z = FIELD_F - 0.3; b.vz *= -0.65; }
 
-    // Player pushes ball
+    // Player ↔ ball elastic collision — ball is solid and bounces the player back
     const px = playerState.position.x;
     const pz = playerState.position.z;
     const pdx = b.x - px, pdz = b.z - pz;
     const pdist = Math.sqrt(pdx * pdx + pdz * pdz);
-    if (pdist < 1.3 && pdist > 0.05) {
-      const force = 9 * (1.3 - pdist) / 1.3;
-      b.vx += (pdx / pdist) * force;
-      b.vz += (pdz / pdist) * force;
+    const COLLISION_RADIUS = 1.1; // ball(0.5) + player(0.6)
+    if (pdist < COLLISION_RADIUS && pdist > 0.01) {
+      const nx = pdx / pdist, nz = pdz / pdist;
+      const overlap = COLLISION_RADIUS - pdist;
+      // Push ball away
+      const ballForce = 11 * overlap;
+      b.vx += nx * ballForce;
+      b.vz += nz * ballForce;
+      // Push player back (they bounce off the ball)
+      playerState.externalForce.x -= nx * overlap * 0.55;
+      playerState.externalForce.z -= nz * overlap * 0.55;
     }
 
     // AI player logic

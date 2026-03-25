@@ -16,13 +16,14 @@ let bulletId = 0;
 const bullets: Bullet[] = [];
 
 export function fireBullet() {
-  const dir = playerState.facing.clone().normalize();
-  const spawnPos = playerState.position.clone().add(new THREE.Vector3(0, 0.4, 0)).addScaledVector(dir, 0.8);
+  // Flat forward direction — ignore any vertical component so bullet flies straight
+  const dir = new THREE.Vector3(playerState.facing.x, 0, playerState.facing.z).normalize();
+  const spawnPos = playerState.position.clone().add(new THREE.Vector3(0, 0.7, 0)).addScaledVector(dir, 0.9);
   bullets.push({
     id: bulletId++,
     position: spawnPos,
-    velocity: dir.multiplyScalar(28),
-    life: 2.0,
+    velocity: dir.multiplyScalar(40),  // faster straight-line shot
+    life: 3.0,
   });
 }
 
@@ -46,21 +47,20 @@ export function Bullets() {
       }
 
       b.position.addScaledVector(b.velocity, dt);
-      // Apply gravity so bullets arc downward
-      b.velocity.y -= 12 * dt;
+      // No gravity — bullets fly in a flat straight line matching the aim direction
 
-      // Remove bullets that fall below ground
-      if (b.position.y < -2) {
+      // Remove bullets that travel too far off ground
+      if (b.position.y < -1 || b.position.y > 20) {
         bullets.splice(i, 1);
         continue;
       }
 
-      // Hit detection vs enemies
+      // Hit detection vs enemies — wider radius for easier hitting
       let hit = false;
       for (const enemy of enemyList) {
         if (enemy.state === 'dead') continue;
         const dist = b.position.distanceTo(enemy.position);
-        if (dist < 1.2) {
+        if (dist < 1.5) {
           enemy.health = Math.max(0, enemy.health - 34);
           bullets.splice(i, 1);
           hit = true;

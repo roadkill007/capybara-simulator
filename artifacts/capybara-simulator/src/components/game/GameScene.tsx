@@ -89,7 +89,7 @@ export function GameScene() {
 
   return (
     <SceneErrorBoundary>
-      <div className="fixed inset-0" style={{ touchAction: 'none' }}>
+      <div className="fixed inset-0" style={{ touchAction: 'none', cursor: 'crosshair' }}>
         <Canvas
           shadows={{ type: THREE.PCFSoftShadowMap }}
           camera={{ position: [0, 6, -12], fov: 60, near: 0.3, far: 220 }}

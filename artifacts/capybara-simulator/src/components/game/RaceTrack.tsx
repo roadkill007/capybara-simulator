@@ -6,11 +6,11 @@ import { playerState } from './playerState';
 
 // ─── Track geometry constants ────────────────────────────────────────────────
 const CX = 10, CZ = -38;        // oval centre in world space
-const RX = 30, RZ = 18;         // semi-axes — bigger oval (1.6× longer track)
+const RX = 46, RZ = 27;         // semi-axes — 2.5× longer track
 const ROAD_W = 12;               // track width in units
-const SEGMENTS = 80;
+const SEGMENTS = 120;            // more segments for the larger oval
 const START_T = 0;               // t parameter at start/finish line
-const START_POS = new THREE.Vector3(CX + RX, 0, CZ); // [40, 0, -38]
+const START_POS = new THREE.Vector3(CX + RX, 0, CZ); // [56, 0, -38]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function trackPos(t: number, y = 0.15): THREE.Vector3 {
@@ -222,7 +222,7 @@ function TrackWorld({ isDark }: { isDark: boolean }) {
 }
 
 // ─── Race gameplay ─────────────────────────────────────────────────────────────
-const PLAYER_BASE_SPEED = 0.28;  // scaled for bigger oval
+const PLAYER_BASE_SPEED = 0.32;  // scaled for bigger oval
 const AI_CONFIGS = [
   { color: '#FF3333', label: 'RED', lane: 2.2,  baseSpeed: 0.24 },
   { color: '#3366FF', label: 'BLU', lane: -2.2, baseSpeed: 0.27 },
@@ -386,14 +386,18 @@ function RaceGameplay() {
 
 // ─── Proximity trigger ────────────────────────────────────────────────────────
 function ProximityTrigger() {
-  const { phase, racePhase, setRacePrompt, startRace } = useGameStore();
+  const { phase, racePhase, setRacePrompt, startRace, dismissRace } = useGameStore();
   const wasNear = useRef(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Enter' && racePhase === 'prompt') startRace();
+      if (e.code !== 'Enter') return;
+      const { racePhase } = useGameStore.getState();
+      if (racePhase === 'prompt')                            { startRace();    return; }
+      if (racePhase === 'racing' || racePhase === 'countdown') { dismissRace(); return; }
     };
     const onClick = () => {
+      const { racePhase } = useGameStore.getState();
       if (racePhase === 'prompt') startRace();
     };
     window.addEventListener('keydown', onKey);
@@ -402,13 +406,14 @@ function ProximityTrigger() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('pointerdown', onClick);
     };
-  }, [racePhase, startRace]);
+  }, [startRace, dismissRace]);
 
   useFrame(() => {
     if (phase !== 'playing') return;
-    if (racePhase !== 'none' && racePhase !== 'prompt') return;
+    // During active race — auto-dismiss if player somehow gets very far (safety valve)
+    if (racePhase === 'racing' || racePhase === 'countdown' || racePhase === 'finished') return;
     const dist = playerState.position.distanceTo(START_POS);
-    const near = dist < 7;
+    const near = dist < 12;  // larger radius for the bigger oval start point
     if (near !== wasNear.current) {
       wasNear.current = near;
       setRacePrompt(near);

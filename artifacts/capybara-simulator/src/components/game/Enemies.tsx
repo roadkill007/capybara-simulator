@@ -39,12 +39,12 @@ interface EnemyRefs {
 // Ref registry: filled imperatively by each ScaryCapybara on mount
 const _refs = new Map<string, EnemyRefs>();
 
-const ENEMY_SPEED      = 3.2;
-const ENEMY_CHASE_DIST = 18;
+const ENEMY_SPEED      = 1.9;   // was 3.2 — less aggressive chasing
+const ENEMY_CHASE_DIST = 11;   // was 18 — only chase when clearly nearby
 const ENEMY_ATTACK_DIST = 1.5;
 const ENEMY_DAMAGE     = 20;
-const MAX_ENEMIES      = 6;   // was 8 — reduce active enemy count
-const SPAWN_INTERVAL   = 14;  // was 12
+const MAX_ENEMIES      = 6;
+const SPAWN_INTERVAL   = 14;
 
 // ─── ScaryCapybara — renders ONCE, never re-renders from prop changes ─────────
 function ScaryCapybara({ id }: { id: string }) {

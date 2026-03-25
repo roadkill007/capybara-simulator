@@ -9,7 +9,8 @@ import { mobileInput } from './mobileInput';
 const SPEED = 5.5;
 const RUN_SPEED = 10;
 const SWIM_SPEED = 3.5;
-const ROTATION_SPEED = 2.8;
+const ROTATION_SPEED = 1.8;    // was 2.8 — slower, more precise turns
+const ROT_SMOOTH = 14;          // lerp factor for visual rotation — eliminates skipping
 const JUMP_FORCE = 7.0;
 const GRAVITY = 20;
 
@@ -182,7 +183,8 @@ function CapybaraBody({ action, isInWater, invincible, isGiant }: {
 
 export function Capybara() {
   const meshRef = useRef<THREE.Group>(null!);
-  const rotationRef = useRef(0);
+  const rotationRef = useRef(0);       // input target angle (updated instantly)
+  const displayRotRef = useRef(0);     // visual angle (lerped — no skipping)
   const posRef = useRef(new THREE.Vector3(0, 0.4, 0));
   const velocityY = useRef(0);
   const isOnGround = useRef(true);
@@ -247,7 +249,7 @@ export function Capybara() {
     if (keys['KeyD'] || keys['ArrowRight']) rotationRef.current -= ROTATION_SPEED * dt;
     if (Math.abs(joyX) > 0.1) rotationRef.current -= joyX * ROTATION_SPEED * dt;
 
-    const fwd = new THREE.Vector3(Math.sin(rotationRef.current), 0, Math.cos(rotationRef.current));
+    const fwd = new THREE.Vector3(Math.sin(displayRotRef.current), 0, Math.cos(displayRotRef.current));
     const isRunning = (keys['ShiftLeft'] || keys['ShiftRight'] || mobileInput.run) && energy > 10;
     const inWater = isInPond(pos.x, pos.z);
     const speed = (inWater ? SWIM_SPEED : isRunning ? RUN_SPEED : SPEED) * giantSpeed;
@@ -278,11 +280,15 @@ export function Capybara() {
     const targetScale = giant ? 2.5 : 1;
     const newScale = meshRef.current.scale.x + (targetScale - meshRef.current.scale.x) * Math.min(1, dt * 4);
     meshRef.current.scale.setScalar(newScale);
+    // Smooth the visual rotation — lerp toward input target to eliminate angle skipping
+    const rotDiff = ((rotationRef.current - displayRotRef.current + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    displayRotRef.current += rotDiff * Math.min(1, dt * ROT_SMOOTH);
+
     meshRef.current.position.copy(pos);
-    meshRef.current.rotation.y = rotationRef.current;
+    meshRef.current.rotation.y = displayRotRef.current;
 
     playerState.position.copy(pos);
-    playerState.rotation = rotationRef.current;
+    playerState.rotation = displayRotRef.current;
     playerState.facing.copy(fwd);
     setIsInWater(inWater);
 
@@ -312,7 +318,7 @@ export function Capybara() {
     const camDist = (giant ? 20 : 11) * zoom;
     const camHeight = (giant ? 9 : 5) * Math.max(0.5, zoom * 0.8 + 0.2);
     const camOffset = new THREE.Vector3(0, camHeight, -camDist);
-    camOffset.applyEuler(new THREE.Euler(0, rotationRef.current, 0));
+    camOffset.applyEuler(new THREE.Euler(0, displayRotRef.current, 0));
     camera.position.lerp(pos.clone().add(camOffset), 0.08);
     camera.lookAt(pos.clone().add(new THREE.Vector3(0, giant ? 2 : 0.8, 0)));
   });
